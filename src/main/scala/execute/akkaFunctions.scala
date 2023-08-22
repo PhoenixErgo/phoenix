@@ -2,11 +2,22 @@ package execute
 
 import configs.{conf, serviceOwnerConf}
 import contracts.PhoenixContracts
-import execute.HodlCalulations.{extractPrecisionFactor, hodlMintAmountFromERG, hodlPrice}
+import execute.HodlCalulations.{
+  extractPrecisionFactor,
+  hodlMintAmountFromERG,
+  hodlPrice
+}
 import org.ergoplatform.appkit.{Address, ErgoContract, InputBox}
 import org.ergoplatform.sdk.ErgoToken
 import special.collection.Coll
-import utils.{BoxAPI, BoxJson, ContractCompile, OutBoxes, TransactionHelper, explorerApi}
+import utils.{
+  BoxAPI,
+  BoxJson,
+  ContractCompile,
+  OutBoxes,
+  TransactionHelper,
+  explorerApi
+}
 
 import java.util
 import scala.collection.JavaConverters._
@@ -129,7 +140,8 @@ class akkaFunctions {
         val minerFee =
           proxyInput.getRegisters.get(4).getValue.asInstanceOf[Long]
 
-        val txOperatorFee = proxyInput.getRegisters.get(5).getValue.asInstanceOf[Long]
+        val txOperatorFee =
+          proxyInput.getRegisters.get(5).getValue.asInstanceOf[Long]
 
         val ergMintAmount =
           proxyInput.getValue - minBoxValue - minerFee - txOperatorFee
@@ -414,7 +426,9 @@ class akkaFunctions {
     } catch {
       case _: Throwable => // Catch any error thrown
         if (boxes.nonEmpty) {
-          mintWithRetry(boxes.tail) // Call mintWithRetry with the first element deleted from the boxes array
+          mintWithRetry(
+            boxes.tail
+          ) // Call mintWithRetry with the first element deleted from the boxes array
         }
     }
   }
@@ -425,13 +439,13 @@ class akkaFunctions {
       minerFee: Long,
       minTxOperatorFee: Long
   ): Boolean = {
-      box.boxId != "831eb559eac7b4880358502a0e83b4dd775b29f95d30040a65c4fb99d11082b2" &&
+    box.boxId != "831eb559eac7b4880358502a0e83b4dd775b29f95d30040a65c4fb99d11082b2" &&
     box.additionalRegisters.R4 != null &&
     box.additionalRegisters.R5.serializedValue != null &&
     box.additionalRegisters.R6.serializedValue != null &&
     box.additionalRegisters.R7.renderedValue.toLong >= minBoxValue &&
     box.additionalRegisters.R8.renderedValue.toLong >= minerFee &&
-      box.additionalRegisters.R9.renderedValue.toLong >= minTxOperatorFee
+    box.additionalRegisters.R9.renderedValue.toLong >= minTxOperatorFee
   }
 
 }
