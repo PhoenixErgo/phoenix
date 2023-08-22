@@ -1,15 +1,11 @@
-package mockchain
+package mockchain.hodlERG
 
-import org.ergoplatform.appkit.{Address, OutBox}
 import mockClient.{Common, HttpClientTesting}
-import org.ergoplatform.sdk.ErgoToken
+import mockchain.PhoenixCommon
+import org.ergoplatform.appkit.{Address, OutBox}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import utils.TransactionHelper
-
-import scala.collection.JavaConverters._
-import scala.collection.mutable
-import scala.collection.mutable.ListBuffer
 
 class FeeSpec
     extends AnyFlatSpec

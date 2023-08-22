@@ -1,9 +1,15 @@
-package mockchain.hodlERG
+package mockchain
 
 import contracts.PhoenixContracts
 import mockClient.HttpClientTesting
 import mockUtils.FileMockedErgoClient
-import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoContract, InputBox}
+import org.ergoplatform.appkit.{
+  Address,
+  BlockchainContext,
+  ErgoContract,
+  InputBox
+}
+import org.ergoplatform.sdk.ErgoToken
 import utils.{ContractCompile, OutBoxes, TransactionHelper}
 
 trait PhoenixCommon extends HttpClientTesting {
@@ -34,7 +40,11 @@ trait PhoenixCommon extends HttpClientTesting {
   val hodlTokenId =
     "2cbabc2be7292e2e857a1f2c34a8b0c090de2f30fa44c68ab71454e5586bd45e"
   val hodlBankNft =
-    "2bbabc2be7292e2e857a1f2c34a8b0c090de2f30fa44c68ab71454e5586bd45e"
+    "dc62f27e6b4bc1432bf78545622cd517b81dea53ee360dde495b308ac0ef1b88"
+
+  // for hodlToken (e.g. hodlComet) contracts
+  val tokenId =
+    "2ababc2be7292e2e857a1f2c34a8b0c090de2f30fa44c68ab71454e5586bd45e"
 
   val userAddress: Address =
     Address.create("9eiuh5bJtw9oWDVcfJnwTm1EHfK5949MEm5DStc2sD1TLwDSrpx")
@@ -42,21 +52,45 @@ trait PhoenixCommon extends HttpClientTesting {
   val feeScript: String =
     PhoenixContracts.phoenix_v1_hodlcoin_feeTest_mainnet.contractScript
 
+  val feeTokenScript: String =
+    PhoenixContracts.phoenix_v1_hodltoken_feeTest_mainnet.contractScript
+
   val phoenixScript: String =
     PhoenixContracts.phoenix_v1_hodlcoin_bank.contractScript
+
+  val phoenixTokenScript: String =
+    PhoenixContracts.phoenix_v1_hodltoken_bank.contractScript
 
   val feeContract: ErgoContract = compiler.compileFeeContract(
     feeScript,
     minMinerFeeNanoErg
   )
+  val defaultFeeTokenContract: ErgoContract = compiler.compileFeeTokenContract(
+    feeTokenScript,
+    minMinerFeeNanoErg,
+    new ErgoToken(
+      "9a06d9e545a41fd51eeffc5e20d818073bf820c635e2a9d922269913e0de369d",
+      1L
+    ),
+    25L,
+    25L,
+    25L
+  )
 
   val phoenixContract: ErgoContract =
     compiler.compileBankContract(phoenixScript, feeContract)
 
+  val phoenixTokenContract: ErgoContract =
+    compiler.compileBankContract(phoenixTokenScript, defaultFeeTokenContract)
+
   val proxyScript: String =
     PhoenixContracts.phoenix_v1_hodlcoin_proxy.contractScript
+  val proxyTokenScript: String =
+    PhoenixContracts.phoenix_v1_hodltoken_proxy.contractScript
   val proxyContract: ErgoContract =
     compiler.compileProxyContract(proxyScript, minTxOperatorFee)
+  val proxyTokenContract: ErgoContract =
+    compiler.compileProxyContract(proxyTokenScript, minTxOperatorFee)
 
   // R4: Long             TotalTokenSupply
   // R5: Long             PrecisionFactor
@@ -104,6 +138,12 @@ trait PhoenixCommon extends HttpClientTesting {
     ergMintAmt * precisionFactor / price
   }
 
+  def hodlTokenMintAmount(hodlBoxIn: InputBox, ergMintAmt: Long): Long = {
+    val price = hodlTokenPrice(hodlBoxIn)
+    val precisionFactor = extractPrecisionFactor(hodlBoxIn)
+    ergMintAmt * precisionFactor / price
+  }
+
   // amount of (nano) ERGs which can be released to when given amount of hodlcoins burnt
 
   /** @return amount of (nano) ERGs which can be released to when given amount of hodlcoins burnt to user,
@@ -131,6 +171,49 @@ trait PhoenixCommon extends HttpClientTesting {
     val price = hodlPrice(hodlBoxIn)
     val precisionFactor = extractPrecisionFactor(hodlBoxIn)
     ergMintAmt * precisionFactor / price
+  }
+
+  /** @return amount of (nano) ERGs which can be released to when given amount of hodlcoins burnt to user,
+    *          and also dev fee
+    */
+  def burnTokenAmount(
+      hodlBoxIn: InputBox,
+      hodlBurnAmt: Long
+  ): (Long, Long, Long) = {
+    val feeDenom = 1000L
+
+    val bankFee =
+      hodlBoxIn.getRegisters.get(4).getValue.asInstanceOf[Long] // R8
+    val devFee = hodlBoxIn.getRegisters.get(3).getValue.asInstanceOf[Long] // R7
+
+    val price = hodlTokenPrice(hodlBoxIn)
+    val precisionFactor = extractPrecisionFactor(hodlBoxIn)
+    val beforeFees = hodlBurnAmt * price / precisionFactor
+    val bankFeeAmount: Long = (beforeFees * bankFee) / feeDenom
+    val devFeeAmount: Long = (beforeFees * devFee) / feeDenom
+    val expectedAmountWithdrawn: Long =
+      beforeFees - bankFeeAmount - devFeeAmount
+    (expectedAmountWithdrawn, devFeeAmount, bankFeeAmount)
+  }
+
+  def hodlTokenPrice(hodlBoxIn: InputBox): Long = {
+    // preserving terminology from the contract
+    val reserveIn = hodlBoxIn.getTokens.get(2).getValue
+    val totalTokenSupply =
+      hodlBoxIn.getRegisters.get(0).getValue.asInstanceOf[Long] // R4
+    val hodlCoinsIn: Long = hodlBoxIn.getTokens.get(1).getValue
+    val hodlCoinsCircIn: Long = totalTokenSupply - hodlCoinsIn
+    val precisionFactor = extractPrecisionFactor(hodlBoxIn)
+    ((BigInt(reserveIn) * BigInt(precisionFactor)) / BigInt(
+      hodlCoinsCircIn
+    )).toLong
+  }
+
+  // amount of (nano) ERGs needed to mint given amount of hodlcoins against given hodl bank
+  def mintAmountToken(hodlBoxIn: InputBox, hodlMintAmt: Long): Long = {
+    val price = hodlTokenPrice(hodlBoxIn)
+    val precisionFactor = extractPrecisionFactor(hodlBoxIn)
+    hodlMintAmt * price / precisionFactor
   }
 
 }

@@ -1,14 +1,7 @@
-package mockchain
+package mockchain.hodlERG
 
-import contracts.PhoenixContracts
-import org.ergoplatform.appkit.{
-  Address,
-  BlockchainContext,
-  ErgoContract,
-  InputBox
-}
-import utils.{ContractCompile, OutBoxes, TransactionHelper}
-import mockClient.{Common, HttpClientTesting}
+import mockClient.Common
+import mockchain.PhoenixCommon
 import org.ergoplatform.sdk.ErgoToken
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -300,7 +293,8 @@ class PhoenixSpec
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
-    val (userBoxAmount, devFeeAmount, bankFeeAmount) = burnAmount(hodlBox, hodlBurnAmount)
+    val (userBoxAmount, devFeeAmount, bankFeeAmount) =
+      burnAmount(hodlBox, hodlBurnAmount)
     val fundingBox = outBoxObj
       .tokenOutBox(
         Array(new ErgoToken(hodlTokenId, hodlBurnAmount)),
@@ -363,7 +357,8 @@ class PhoenixSpec
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
-    val (userBoxAmount, devFeeAmount, bankFeeAmount) = burnAmount(hodlBox, hodlBurnAmount)
+    val (userBoxAmount, devFeeAmount, bankFeeAmount) =
+      burnAmount(hodlBox, hodlBurnAmount)
     val fundingBox = outBoxObj
       .tokenOutBox(
         Array(new ErgoToken(hodlTokenId, hodlBurnAmount)),
@@ -427,7 +422,8 @@ class PhoenixSpec
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
-    val (userBoxAmount, devFeeAmount, bankFeeAmount) = burnAmount(hodlBox, hodlBurnAmount)
+    val (userBoxAmount, devFeeAmount, bankFeeAmount) =
+      burnAmount(hodlBox, hodlBurnAmount)
     val fundingBox = outBoxObj
       .tokenOutBox(
         Array(new ErgoToken(hodlTokenId, hodlBurnAmount)),
@@ -494,7 +490,8 @@ class PhoenixSpec
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
-    val (userBoxAmount, devFeeAmount, bankFeeAmount) = burnAmount(hodlBox, hodlBurnAmount)
+    val (userBoxAmount, devFeeAmount, bankFeeAmount) =
+      burnAmount(hodlBox, hodlBurnAmount)
     val fundingBox = outBoxObj
       .tokenOutBox(
         Array(new ErgoToken(hodlTokenId, hodlBurnAmount)),
@@ -519,9 +516,9 @@ class PhoenixSpec
 
     val devFeeBox =
       outBoxObj.simpleOutBox(
-        userAddress,
+        userAddress, // <-- this line changed
         devFeeAmount
-      ) // <-- this line changed
+      )
 
     val unsignedTransaction = txHelper.buildUnsignedTransaction(
       inputs = Array(hodlBox, fundingBox),
