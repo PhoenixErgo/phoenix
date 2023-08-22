@@ -108,13 +108,19 @@ class OutBoxes(ctx: BlockchainContext) {
 
   def genericContractBox(
       contract: ErgoContract,
-      amount: Long = minAmount
+      amount: Long = minAmount,
+      tokens: Seq[ErgoToken] = Seq.empty
   ): OutBox = {
-    this.txBuilder
+    val box = this.txBuilder
       .outBoxBuilder()
       .value(amount)
       .contract(contract)
-      .build()
+    if (tokens.nonEmpty) {
+      box.tokens(tokens: _*)
+    }.build()
+    else {
+      box.build()
+    }
   }
 
   def simpleOutBox(
@@ -142,12 +148,18 @@ class OutBoxes(ctx: BlockchainContext) {
       minBankValue: Long,
       bankFeeNum: Long,
       devFeeNum: Long,
-      amount: Long = minAmount
+      amount: Long = minAmount,
+      additionalToken: Option[ErgoToken] = None
   ): OutBox = {
+    val tokensArray = if (additionalToken.isDefined) {
+      Array(hodlSingleton, hodlToken, additionalToken.get)
+    } else {
+      Array(hodlSingleton, hodlToken)
+    }
     this.txBuilder
       .outBoxBuilder()
       .value(amount)
-      .tokens(hodlSingleton, hodlToken)
+      .tokens(tokensArray: _*)
       .registers(
         ErgoValue.of(totalTokenSupply),
         ErgoValue.of(precisionFactor),
@@ -203,9 +215,10 @@ class OutBoxes(ctx: BlockchainContext) {
       minBoxValue: Long,
       minerFee: Long,
       txOperatorFee: Long,
-      amount: Long = minAmount
+      amount: Long = minAmount,
+      baseToken: Option[ErgoToken] = None
   ): OutBox = {
-    this.txBuilder
+    val box = this.txBuilder
       .outBoxBuilder()
       .value(amount)
       .registers(
@@ -217,7 +230,11 @@ class OutBoxes(ctx: BlockchainContext) {
         ErgoValue.of(txOperatorFee)
       )
       .contract(proxyContract)
-      .build()
+
+    if (baseToken.isDefined) {
+      box.tokens(baseToken.get)
+    }
+    box.build()
   }
 
   def proxyBurnInputBox(
