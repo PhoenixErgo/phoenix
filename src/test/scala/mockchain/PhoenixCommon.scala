@@ -1,15 +1,10 @@
-package mockchain
+package mockchain.hodlERG
 
 import contracts.PhoenixContracts
-import mockUtils.FileMockedErgoClient
-import org.ergoplatform.appkit.{
-  Address,
-  BlockchainContext,
-  ErgoContract,
-  InputBox
-}
-import utils.{ContractCompile, OutBoxes, TransactionHelper}
 import mockClient.HttpClientTesting
+import mockUtils.FileMockedErgoClient
+import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoContract, InputBox}
+import utils.{ContractCompile, OutBoxes, TransactionHelper}
 
 trait PhoenixCommon extends HttpClientTesting {
 
