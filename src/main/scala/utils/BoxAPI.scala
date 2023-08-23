@@ -60,7 +60,7 @@ case class BoxJson(
     globalIndex: Int,
     creationHeight: Int,
     settlementHeight: Int,
-    ergoTree: String,
+    var ergoTree: String,
     ergoTreeConstants: String,
     ergoTreeScript: String,
     address: String,
