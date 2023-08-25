@@ -10,6 +10,7 @@ import org.ergoplatform.appkit.{
   OutBox
 }
 import utils.{BoxAPI, ContractCompile, InputBoxes, OutBoxes, TransactionHelper}
+import scala.collection.JavaConverters._
 
 object DevReward extends App {
 
@@ -29,7 +30,7 @@ object DevReward extends App {
   val compiler = new ContractCompile(ctx)
 
   private val boxAPIObj = new BoxAPI(serviceConf.apiUrl, serviceConf.nodeUrl)
-  val minMinerFeeNanoErg = 1029843L
+  val minMinerFeeNanoErg = 1000000L
 
   val feeScript: String =
     PhoenixContracts.phoenix_v1_hodlcoin_fee.contractScript
@@ -40,7 +41,7 @@ object DevReward extends App {
   )
 
   val brunoAddress: Address = Address.create(
-    "9exfustUCPDKXsfDrGNrmtkyLDwAie2rKKdUsPVa26RuBFaYeCL" // revert back to original address
+    "9gnBtmSRBMaNTkLQUABoAqmU2wzn27hgqVvezAC9SU1VqFKZCp8" // revert back to original address
   )
   val pulsarzAddress: Address =
     Address.create("9hHondX3uZMY2wQsXuCGjbgZUqunQyZCNNuwGu6rL7AJC8dhRGa")
@@ -59,65 +60,69 @@ object DevReward extends App {
   val krasNum: Long = 10L
 
   def getDevBoxes(totalAmountForDevs: Long): Array[OutBox] = {
+    val truncatedTotal = (totalAmountForDevs / 1000000L) * 1000000L
     Array(
       outBoxObj
-        .simpleOutBox(brunoAddress, (brunoNum * totalAmountForDevs) / feeDenom),
+        .simpleOutBox(brunoAddress, ((BigDecimal(brunoNum) * BigDecimal(truncatedTotal)) / BigDecimal(feeDenom)).setScale(0, BigDecimal.RoundingMode.FLOOR).toLong),
       outBoxObj.simpleOutBox(
         pulsarzAddress,
-        (pulsarzNum * totalAmountForDevs) / feeDenom
+        ((BigDecimal(pulsarzNum) * BigDecimal(truncatedTotal)) / BigDecimal(feeDenom)).setScale(0, BigDecimal.RoundingMode.FLOOR).toLong
       ),
       outBoxObj.simpleOutBox(
         phoenixAddress,
-        (phoenixNum * totalAmountForDevs) / feeDenom
+        ((BigDecimal(phoenixNum) * BigDecimal(truncatedTotal)) / BigDecimal(feeDenom)).setScale(0, BigDecimal.RoundingMode.FLOOR).toLong
       ),
       outBoxObj.simpleOutBox(
         kushtiAddress,
-        (kushtiNum * totalAmountForDevs) / feeDenom
+        ((BigDecimal(kushtiNum) * BigDecimal(truncatedTotal)) / BigDecimal(feeDenom)).setScale(0, BigDecimal.RoundingMode.FLOOR).toLong
       ),
       outBoxObj.simpleOutBox(
         krasAddress,
-        (krasNum * totalAmountForDevs) / feeDenom
+        ((BigDecimal(krasNum) * BigDecimal(truncatedTotal)) / BigDecimal(feeDenom)).setScale(0, BigDecimal.RoundingMode.FLOOR).toLong
       )
     )
   }
-
-  val feeAddress =
-    "mCbJgVdTUoKiLn8a8Xucgvj45icZtV2uC85276wHVJQGtRhWzVAFiRDjJohyFDV81nShLn5Afc33mnV9mZUTkVty1zRPPRcXWRjhouRpxor7kMycsv8WSrbbP4p9oxsrsdoc6GQaoddfGexyzyPoQmgxNV1B9WQm4Ec5DTvEceHeV69mvqHGxB7cgps7eCvp2wLfhLm4DDuoteC6igiiHTtVhcG6SesqycQfnH7HACfjZLDsqAHtxCG3XzoGBpz6TjHTCXEmYEN3FiTd4AVskFaV31z5Re69ArUTxMoWPjP6dXZb3LBXtti3RUBeXLSAyTCbJktxU6irjjobTgz4jrjFr9QPnBnFENUesLpF4RYyXsR4t3awPZgXLbHFvCT8t8bcpnrP92Nue1wVCthaWRmCaJyRZddZDZLwAzSVutgaANNzr795EzVhv1kRTPgrae25VFZfdnVwvAiL1g67pJFc74etaEFGUQ26aotehPH6Y9hMreHiUDFRepGZiWRgsdpgoGnRdv4yR6GvePRWEymWCfsy1cNRhmqz4XbJPAaNuEoPkGbBTfvCFdjhfh9tczf4tkuRdhNLBePSbq9vntwFrek2Sy62D7MUfwK4GqwDkFDyYUNsgVKjC7z3nLQAdAU72ChhAXMqKLrxhvp2VaUmZj8jYdbXLUaH3Q7uJC65EHcMau"
+//  val feeAddy =
+//    "mCbJgVdTUoKiLn8a8Xucgvj45icZtV2uC85276wHVJQGtRhWzVAFiRDjJohyFDV81nShLn5Afc33mnV9mZUTkVty1zRPPRcXWRjhouRpxor7kMycsv8WSrbbP4p9oxsrsdoc6GQaoddfGexyzyPoQmgxNV1B9WQm4Ec5DTvEceHeV69mvqHGxB7cgps7eCvp2wLfhLm4DDuoteC6igiiHTtVhcG6SesqycQfnH7HACfjZLDsqAHtxCG3XzoGBpz6TjHTCXEmYEN3FiTd4AVskFaV31z5Re69ArUTxMoWPjP6dXZb3LBXtti3RUBeXLSAyTCbJktxU6irjjobTgz4jrjFr9QPnBnFENUesLpF4RYyXsR4t3awPZgXLbHFvCT8t8bcpnrP92Nue1wVCthaWRmCaJyRZddZDZLwAzSVutgaANNzr795EzVhv1kRTPgrae25VFZfdnVwvAiL1g67pJFc74etaEFGUQ26aotehPH6Y9hMreHiUDFRepGZiWRgsdpgoGnRdv4yR6GvePRWEymWCfsy1cNRhmqz4XbJPAaNuEoPkGbBTfvCFdjhfh9tczf4tkuRdhNLBePSbq9vntwFrek2Sy62D7MUfwK4GqwDkFDyYUNsgVKjC7z3nLQAdAU72ChhAXMqKLrxhvp2VaUmZj8jYdbXLUaH3Q7uJC65EHcMau"
 
   val boxes =
     boxAPIObj
       .getUnspentBoxesFromApi(
-        feeAddress,
-        amountToSelect = 225
+        feeContract.toAddress.toString,
+        amountToSelect = 200
       )
       .items
-      .map(box => {
-        box.ergoTree = feeContract.getErgoTree.bytesHex
-        box
-      })
+//      .map(box => {
+//        box.ergoTree = feeContract.getErgoTree.bytesHex
+//        box
+//      })
 
   val devAmount = (boxes.map(_.value).sum) - (minMinerFeeNanoErg)
 
-  println(boxes.map(_.value).sum)
-  println(devAmount)
-
   val devBoxes = getDevBoxes(devAmount)
 
-  println(devBoxes.map(_.getValue).sum)
+  val diff = devAmount - devBoxes.map(_.getValue).sum
+
+  val minerFee = {
+    if (diff > 0) {
+      minMinerFeeNanoErg + diff
+    } else {
+      minMinerFeeNanoErg
+    }
+  }
 
   val unsignedTransaction = txHelper.buildUnsignedTransaction(
     inputs = boxes.map(boxAPIObj.convertJsonBoxToInputBox),
     outputs = devBoxes,
-    fee = minMinerFeeNanoErg
+    fee = minerFee
   )
 
-  println("miner box value: " + unsignedTransaction.getOutputs.get(5).getValue)
-
-
-  println(unsignedTransaction.getOutputs.size())
-
-  txHelper.signTransaction(
+  val signedTx = txHelper.signTransaction(
     unsignedTransaction
   )
+
+  val txHash = txHelper.sendTx(signedTx)
+
+  println(txHash)
 
 }
