@@ -73,10 +73,10 @@
 
     allOf(Coll(
         validBruno,
-        true,
-        true,
-        true,
-        true
+        validPulsarz,
+        validPhoenix,
+        validKushti,
+        validKras
     ))
 
 }
@@ -96,7 +96,7 @@
         validMinAmount,
         validDevBoxes,
         validMinerFee,
-        true
+        validOutputSize
     ))
 
 }
