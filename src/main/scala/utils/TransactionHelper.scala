@@ -1,5 +1,10 @@
 package utils
 
+import configs.JsonParser.{
+  getJsonFromErrorMsg,
+  isDoubleSpendingError,
+  isTxInMempoolError
+}
 import configs.{SignedTransactionJsonParser, UnsignedTransactionJsonParser}
 import org.ergoplatform.appkit.{
   Address,
@@ -11,8 +16,12 @@ import org.ergoplatform.appkit.{
   UnsignedTransaction
 }
 import org.ergoplatform.sdk.{ErgoToken, SecretString}
+import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.JavaConversions.`deprecated asScalaBuffer`
+
+class DoubleSpendingError(message: String) extends Exception(message)
+class TransactionInMempool(message: String) extends Exception(message)
 
 class TransactionHelper(
     ctx: BlockchainContext,
@@ -93,7 +102,19 @@ class TransactionHelper(
   }
 
   def sendTx(signedTransaction: SignedTransaction): String = {
-    this.ctx.sendTransaction(signedTransaction)
+    try {
+      this.ctx.sendTransaction(signedTransaction)
+    } catch {
+      case e: Exception =>
+        val errorMsg = Option(e.getMessage).getOrElse("")
+        getJsonFromErrorMsg(errorMsg) match {
+          case Some(json) if isDoubleSpendingError(json) =>
+            throw new DoubleSpendingError("double-spending-error")
+          case Some(json) if isTxInMempoolError(json) =>
+            throw new TransactionInMempool("tx-in-mempool-error")
+          case _ => throw e
+        }
+    }
   }
 
   def createToken(
