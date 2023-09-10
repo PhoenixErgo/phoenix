@@ -1,5 +1,6 @@
 package utils
 
+import configs.{SignedTransactionJsonParser, UnsignedTransactionJsonParser}
 import org.ergoplatform.appkit.{
   Address,
   BlockchainContext,
@@ -10,6 +11,8 @@ import org.ergoplatform.appkit.{
   UnsignedTransaction
 }
 import org.ergoplatform.sdk.{ErgoToken, SecretString}
+
+import scala.collection.JavaConversions.`deprecated asScalaBuffer`
 
 class TransactionHelper(
     ctx: BlockchainContext,
@@ -63,6 +66,32 @@ class TransactionHelper(
       .build()
     prover.sign(unsignedTransaction)
   }
+  def getUnsignedJson(
+      unsignedTransaction: UnsignedTransaction,
+      prettyPrint: Boolean = true
+  ): String = {
+    val unsignedJson = UnsignedTransactionJsonParser.readJsonString(
+      unsignedTransaction.toJson(prettyPrint)
+    )
+    unsignedTransaction.getOutputs.zipWithIndex.foreach { case (out, index) =>
+      unsignedJson.outputs(index).ergoTree = out.getErgoTree.bytesHex
+    }
+    UnsignedTransactionJsonParser.toJsonString(unsignedJson, prettyPrint)
+  }
+
+  def getSignedJson(
+      signedTransaction: SignedTransaction,
+      prettyPrint: Boolean = true
+  ): String = {
+    val signedJson = SignedTransactionJsonParser.readJsonString(
+      signedTransaction.toJson(prettyPrint)
+    )
+    signedTransaction.getOutputs.zipWithIndex.foreach { case (out, index) =>
+      signedJson.outputs(index).ergoTree = out.getErgoTree.bytesHex
+    }
+    SignedTransactionJsonParser.toJsonString(signedJson, prettyPrint)
+  }
+
   def sendTx(signedTransaction: SignedTransaction): String = {
     this.ctx.sendTransaction(signedTransaction)
   }
