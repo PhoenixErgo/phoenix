@@ -25,7 +25,7 @@ object initialize extends App {
   val compiler = new ContractCompile(ctx)
 
   private val feeScript: String =
-    PhoenixContracts.phoenix_v1_hodlcoin_fee.contractScript
+    PhoenixContracts.phoenix_v1_hodlcoin_feeTest.contractScript
 
   private val phoenixScript: String = // make sure to change depending on testnet or mainnet
     PhoenixContracts.phoenix_v1_hodlcoin_bank.contractScript
