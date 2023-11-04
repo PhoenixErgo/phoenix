@@ -24,7 +24,7 @@ object HodlCalulations {
   def hodlMintAmountFromERG(hodlBoxIn: InputBox, ergMintAmt: Long): BigInt = {
     val price = hodlPrice(hodlBoxIn)
     val precisionFactor = extractPrecisionFactor(hodlBoxIn)
-    ergMintAmt * precisionFactor / price
+    BigInt(ergMintAmt) * BigInt(precisionFactor) / BigInt(price)
   }
 
 }
