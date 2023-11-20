@@ -55,8 +55,6 @@ class akkaFunctions {
         .getUnspentBoxesFromApi(hodlERGProxyAddress.toString, selectAll = true)
         .items
 
-    mintHodlERGWithRetry(hodlERGboxes)
-
     val hodlTokenBoxes =
       boxAPIObj
         .getUnspentBoxesFromApi(
@@ -65,11 +63,13 @@ class akkaFunctions {
         )
         .items
 
+    mintHodlERGWithRetry(hodlTokenBoxes)
+
   }
 
   def mintHodlERGWithRetry(boxes: Array[BoxJson]): Unit = {
     try {
-      mint(boxes) // Call the mint function
+      hodlTokenMint(boxes) // Call the mint function
     } catch {
       case _: Throwable => // Catch any error thrown
         if (boxes.nonEmpty) {
@@ -144,6 +144,87 @@ class akkaFunctions {
         }
         .getOrElse {
           txBuilder.process(txBuilder.processHodlERGBurn)(
+            burnInputs,
+            bankBoxAfterMints.get
+          )
+        }
+
+    val filteredBurnErrors = burnErrors.filterNot(e =>
+      e == "double-spending-error" || e == "tx-in-mempool-error"
+    )
+
+    if (filteredBurnErrors.nonEmpty) {
+      println(
+        s"Errors while processing burns (${filteredBurnErrors.size}): ${filteredBurnErrors.mkString(", ")}"
+      )
+    }
+
+  }
+
+  def hodlTokenMint(boxes: Array[BoxJson]): Unit = {
+    val validatedBoxInputs: Array[InputBox] = boxes
+      .filter(box => {
+        //        box.ergoTree = "10010101d17300" // for debugging with sigmaProp(true) ergotree
+        validateBox(
+          box,
+          serviceConf.minBoxValue,
+          serviceConf.minMinerFee,
+          serviceConf.minTxOperatorFee
+        )
+      })
+      .map(boxAPIObj.convertJsonBoxToInputBox)
+
+    if (validatedBoxInputs.isEmpty) {
+      println("No Valid Boxes Found")
+      return
+    }
+
+    val bankSingleton = new ErgoToken(
+      validatedBoxInputs.head.getRegisters
+        .get(1)
+        .getValue
+        .asInstanceOf[Coll[Byte]]
+        .toArray,
+      1L
+    )
+
+    val bankBoxFromApi: Option[InputBox] = for {
+      boxID <- txBuilder.explorer
+        .getUnspentBoxFromTokenID(bankSingleton.getId.toString())
+      box <- txBuilder.explorer.getUnspentBoxFromMempool(boxID.getBoxId)
+    } yield box
+
+    val (mintInputs, burnInputs) =
+      sortProxyInputs(validatedBoxInputs, bankSingleton)
+
+    val (errors, bankBoxAfterMints) =
+      bankBoxFromApi
+        .map { box =>
+          txBuilder.process(txBuilder.processHodlTokenMint)(mintInputs, box)
+        }
+        .getOrElse {
+          println("No box provided for minting.")
+          (List.empty[String], None)
+          return
+        }
+
+    val filteredErrors = errors.filterNot(e =>
+      e == "double-spending-error" || e == "tx-in-mempool-error"
+    )
+
+    if (filteredErrors.nonEmpty) {
+      println(
+        s"Errors while processing txns (${filteredErrors.size}): ${filteredErrors.mkString(", ")}"
+      )
+    }
+
+    val (burnErrors, bankBoxAfterBurn) =
+      bankBoxAfterMints
+        .map { box =>
+          txBuilder.process(txBuilder.processHodlTokenBurn)(burnInputs, box)
+        }
+        .getOrElse {
+          txBuilder.process(txBuilder.processHodlTokenBurn)(
             burnInputs,
             bankBoxAfterMints.get
           )
