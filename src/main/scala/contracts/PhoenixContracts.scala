@@ -61,6 +61,7 @@ object PhoenixContracts extends Enum[PhoenixContracts] {
   case object phoenix_v1_hodlcoin_feeTest extends BoxGuardScriptContract
   case object phoenix_v1_hodlcoin_feeTest_mainnet extends BoxGuardScriptContract
   case object phoenix_v1_hodltoken_feeTest_mainnet extends BoxGuardScriptContract
+  case object phoenix_v1_hodltoken_feeTest_testnet extends BoxGuardScriptContract
   case object phoenix_v1_hodlcoin_proxy
       extends ProxyContractBoxGuardScriptContract
 
