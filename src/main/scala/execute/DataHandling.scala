@@ -127,24 +127,6 @@ object DataHandling {
     (mintInputs.filter(sortBySingleton), burnInputs.filter(sortBySingleton))
   }
 
-  def burnAmount(hodlBoxIn: InputBox, hodlBurnAmt: Long): (Long, Long, Long) = {
-    val feeDenom = 1000L
-
-    val devFee =
-      hodlBoxIn.getRegisters.get(3).getValue.asInstanceOf[Long] // R7
-    val bankFee =
-      hodlBoxIn.getRegisters.get(4).getValue.asInstanceOf[Long] // R8
-
-    val price = hodlPrice(hodlBoxIn)
-    val precisionFactor = extractPrecisionFactor(hodlBoxIn)
-    val beforeFees = hodlBurnAmt * price / precisionFactor
-    val bankFeeAmount: Long = (beforeFees * bankFee) / feeDenom
-    val devFeeAmount: Long = (beforeFees * devFee) / feeDenom
-    val expectedAmountWithdrawn: Long =
-      beforeFees - bankFeeAmount - devFeeAmount
-    (expectedAmountWithdrawn, devFeeAmount, bankFeeAmount)
-  }
-
   def validateBox(
       box: BoxJson,
       minBoxValue: Long,
