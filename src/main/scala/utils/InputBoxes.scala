@@ -8,7 +8,7 @@ import scala.collection.JavaConverters._
 
 class InputBoxes(val ctx: BlockchainContext) {
 
-  def getBoxById(id: String): Array[InputBox] = {
+  def getBoxesById(id: String): Array[InputBox] = {
     this.ctx.getBoxesById(id)
   }
 
