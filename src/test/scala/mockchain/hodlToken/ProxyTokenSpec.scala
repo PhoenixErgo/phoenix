@@ -40,7 +40,7 @@ class ProxyTokenSpec
 
   "PhoenixTokenMintOperationWithProxy" should "work correctly when all conditions are satisfied" in {
 
-    val hodlTokenMintAmount = 20
+    val tokenMintAmount = 20
 
     val hodlTokens = new ErgoToken(hodlTokenId, baseTokenTotalSupply - 1L)
     val baseTokens = new ErgoToken(baseTokenId, startingTVLAmount)
@@ -60,7 +60,10 @@ class ProxyTokenSpec
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
-    val amountBaseTokenRequired = mintAmountToken(hodlBox, hodlTokenMintAmount)
+    val amountBaseTokenRequired = mintAmountToken(
+      hodlBox,
+      tokenMintAmount
+    ) // given that you want 20 hodlTokens how much base tokens you need to deposit
 
     val proxyInput = outBoxObj
       .proxyMintInputBox(
@@ -81,7 +84,7 @@ class ProxyTokenSpec
       hodlBankSingleton,
       new ErgoToken(
         hodlTokenId,
-        hodlBox.getTokens.get(1).getValue - hodlTokenMintAmount
+        hodlBox.getTokens.get(1).getValue - tokenMintAmount
       ),
       baseTokenTotalSupply,
       precisionFactor,
@@ -99,169 +102,7 @@ class ProxyTokenSpec
 
     val recipientBox = outBoxObj.hodlMintBox(
       userAddress,
-      new ErgoToken(hodlTokenId, hodlTokenMintAmount)
-    )
-
-    val unsignedTransaction = txHelper.buildUnsignedTransaction(
-      inputs = Array(hodlBox, proxyInput),
-      outputs = Array(hodlOutBox, recipientBox),
-      fee = minerFee
-    )
-
-    noException shouldBe thrownBy {
-      txHelper.signTransaction(
-        unsignedTransaction
-      )
-    }
-
-  }
-
-  "PhoenixTokenMintOperationWithProxyWithBuggyDecimals" should "fail since amountHodlToMint goes to zero" in {
-
-    val hodlTokens =
-      new ErgoToken(hodlTokenId, 97739923L) // <-- this is changed
-    val baseTokens =
-      new ErgoToken(baseTokenId, 1009584710L) // <-- this is changed
-
-    val hodlBox = outBoxObj
-      .hodlBankBox(
-        phoenixTokenContract,
-        hodlBankSingleton,
-        hodlTokens,
-        97739924L, // <-- this is changed
-        precisionFactor,
-        minBankValue,
-        3L, // <-- this is changed
-        1L, // <-- this is changed
-        bankERGAmount,
-        Some(baseTokens)
-      )
-      .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val amountBaseTokenRequired = Parameters.OneErg
-    val hodlTokenMintAmt = hodlTokenMintAmount(hodlBox, amountBaseTokenRequired)
-
-    val proxyInput = outBoxObj
-      .proxyMintInputBox(
-        proxyTokenContract,
-        userAddress,
-        hodlBankSingleton,
-        dummyHodlTokens,
-        minBoxValue,
-        minerFee,
-        minTxOperatorFee,
-        minBoxValue + minerFee + minTxOperatorFee,
-        Some(new ErgoToken(baseTokenId, amountBaseTokenRequired))
-      )
-      .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val hodlOutBox = outBoxObj.hodlBankBox(
-      phoenixTokenContract,
-      hodlBankSingleton,
-      new ErgoToken(
-        hodlTokenId,
-        hodlBox.getTokens.get(1).getValue - hodlTokenMintAmt
-      ),
-      97739924L, // <-- this is changed
-      precisionFactor,
-      minBankValue,
-      3L, // <-- this has changed
-      1L, // <-- this has changed
-      bankERGAmount,
-      Some(
-        ErgoToken(
-          hodlBox.getTokens.get(2).getId,
-          hodlBox.getTokens.get(2).getValue + amountBaseTokenRequired
-        )
-      )
-    )
-
-    val recipientBox = outBoxObj.hodlMintBox(
-      userAddress,
-      new ErgoToken(hodlTokenId, hodlTokenMintAmt)
-    )
-
-    a[IllegalArgumentException] shouldBe thrownBy { // <-- this is changed
-
-      val unsignedTransaction = txHelper.buildUnsignedTransaction(
-        inputs = Array(hodlBox, proxyInput),
-        outputs = Array(hodlOutBox, recipientBox),
-        fee = minerFee
-      )
-
-      txHelper.signTransaction(
-        unsignedTransaction
-      )
-    }
-
-  }
-
-  "PhoenixTokenMintOperationWithProxyWithBuggyDecimals" should "work correctly when hodlTokens get decimals" in {
-
-    val hodlTokens =
-      new ErgoToken(
-        hodlTokenId,
-        (97739923 * math.pow(10, 9)).toLong
-      ) // <-- this has changed
-    val baseTokens =
-      new ErgoToken(baseTokenId, 1009584710L)
-
-    val hodlBox = outBoxObj
-      .hodlBankBox(
-        phoenixTokenContract,
-        hodlBankSingleton,
-        hodlTokens,
-        (97739924 * math.pow(10, 9)).toLong, // <-- this is changed
-        precisionFactor,
-        minBankValue,
-        3L,
-        1L,
-        bankERGAmount,
-        Some(baseTokens)
-      )
-      .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val amountBaseTokenRequired = Parameters.OneErg
-    val hodlTokenMintAmt = hodlTokenMintAmount(hodlBox, amountBaseTokenRequired)
-
-    val proxyInput = outBoxObj
-      .proxyMintInputBox(
-        proxyTokenContract,
-        userAddress,
-        hodlBankSingleton,
-        dummyHodlTokens,
-        minBoxValue,
-        minerFee,
-        minTxOperatorFee,
-        minBoxValue + minerFee + minTxOperatorFee,
-        Some(new ErgoToken(baseTokenId, amountBaseTokenRequired))
-      )
-      .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val hodlOutBox = outBoxObj.hodlBankBox(
-      phoenixTokenContract,
-      hodlBankSingleton,
-      new ErgoToken(
-        hodlTokenId,
-        hodlBox.getTokens.get(1).getValue - hodlTokenMintAmt
-      ),
-      (97739924 * math.pow(10, 9)).toLong, // <-- this is changed
-      precisionFactor,
-      minBankValue,
-      3L,
-      1L,
-      bankERGAmount,
-      Some(
-        ErgoToken(
-          hodlBox.getTokens.get(2).getId,
-          hodlBox.getTokens.get(2).getValue + amountBaseTokenRequired
-        )
-      )
-    )
-
-    val recipientBox = outBoxObj.hodlMintBox(
-      userAddress,
-      new ErgoToken(hodlTokenId, hodlTokenMintAmt)
+      new ErgoToken(hodlTokenId, tokenMintAmount)
     )
 
     val unsignedTransaction = txHelper.buildUnsignedTransaction(
@@ -514,6 +355,90 @@ class ProxyTokenSpec
     val unsignedTransaction = txHelper.buildUnsignedTransaction(
       inputs = Array(hodlBox, proxyInput),
       outputs = Array(hodlOutBox, recipientBox),
+      fee = minerFee
+    )
+
+    the[Exception] thrownBy {
+      txHelper.signTransaction(unsignedTransaction)
+    } should have message "Script reduced to false"
+
+  }
+
+  "PhoenixTokenMintOperationWithProxy" should "fail when offchain code sends to an address that belongs to buyer and a random person (MiM attack)" in {
+
+    val hodlTokenMintAmount = 20
+
+    val hodlTokens = new ErgoToken(hodlTokenId, baseTokenTotalSupply - 1L)
+    val baseTokens = new ErgoToken(baseTokenId, startingTVLAmount)
+
+    val hodlBox = outBoxObj
+      .hodlBankBox(
+        phoenixTokenContract,
+        hodlBankSingleton,
+        hodlTokens,
+        baseTokenTotalSupply,
+        precisionFactor,
+        minBankValue,
+        bankFee,
+        devFee,
+        bankERGAmount,
+        Some(baseTokens)
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val amountBaseTokenRequired = mintAmountToken(hodlBox, hodlTokenMintAmount)
+
+    val proxyInput = outBoxObj
+      .proxyMintInputBox(
+        proxyTokenContract,
+        userAddress,
+        hodlBankSingleton,
+        dummyHodlTokens,
+        minBoxValue,
+        minerFee,
+        minTxOperatorFee,
+        minBoxValue + minBoxValue + minerFee + minTxOperatorFee, // <-- extra min box value added to cover extra recipient box
+        Some(new ErgoToken(baseTokenId, amountBaseTokenRequired))
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val hodlOutBox = outBoxObj.hodlBankBox(
+      phoenixTokenContract,
+      hodlBankSingleton,
+      new ErgoToken(
+        hodlTokenId,
+        hodlBox.getTokens.get(1).getValue - hodlTokenMintAmount
+      ),
+      baseTokenTotalSupply,
+      precisionFactor,
+      minBankValue,
+      bankFee,
+      devFee,
+      bankERGAmount,
+      Some(
+        ErgoToken(
+          hodlBox.getTokens.get(2).getId,
+          hodlBox.getTokens.get(2).getValue + amountBaseTokenRequired
+        )
+      )
+    )
+
+    val recipientBox = outBoxObj.hodlMintBox(
+      userAddress,
+      new ErgoToken(hodlTokenId, hodlTokenMintAmount / 2) // <-- this is changed
+    )
+
+    val recipientBox2 = outBoxObj.hodlMintBox(
+      Address.create(
+        "9gNYeyfRFUipiWZ3JR1ayDMoeh28E6J7aDQosb7yrzsuGSDqzCC"
+      ),
+      new ErgoToken(hodlTokenId, hodlTokenMintAmount / 2) // <-- this is changed
+    )
+
+    val unsignedTransaction = txHelper.buildUnsignedTransaction(
+      inputs = Array(hodlBox, proxyInput),
+      outputs =
+        Array(hodlOutBox, recipientBox, recipientBox2), // <-- this is changed
       fee = minerFee
     )
 
@@ -882,9 +807,109 @@ class ProxyTokenSpec
     } should have message "Script reduced to false"
   }
 
+  "PhoenixTokenBurnOperationWithProxy" should "fail when offchain code sends to an address that belongs to buyer and a random person (MiM attack)" in {
+    val hodlTokenBurnAmount = 20
+
+    val hodlTokens =
+      new ErgoToken(hodlTokenId, baseTokenTotalSupply - hodlTokenBurnAmount)
+    val baseTokens = new ErgoToken(baseTokenId, startingTVLAmount)
+
+    val hodlBox = outBoxObj
+      .hodlBankBox(
+        phoenixTokenContract,
+        hodlBankSingleton,
+        hodlTokens,
+        baseTokenTotalSupply,
+        precisionFactor,
+        minBankValue,
+        bankFee,
+        devFee,
+        bankERGAmount,
+        Some(baseTokens)
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val (userBoxAmount, devFeeAmount, bankFeeAmount) =
+      burnTokenAmount(hodlBox, hodlTokenBurnAmount)
+
+    val proxyInput = outBoxObj
+      .proxyBurnInputBox(
+        proxyTokenContract,
+        userAddress,
+        hodlBankSingleton,
+        new ErgoToken(hodlTokenId, hodlTokenBurnAmount),
+        minBoxValue,
+        minerFee,
+        minTxOperatorFee,
+        minerFee + minTxOperatorFee + minBoxValue + minBoxValue + minBoxValue // <-- note that there is an extra minBoxValue to account for extra recipient box
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    // #1 minBoxValue is for recipient box
+    // #2 minBoxValue is for dev fee box
+
+    val hodlOutBox = outBoxObj.hodlBankBox(
+      phoenixTokenContract,
+      hodlBankSingleton,
+      new ErgoToken(
+        hodlTokenId,
+        hodlBox.getTokens.get(1).getValue + proxyInput.getTokens.get(0).getValue
+      ),
+      baseTokenTotalSupply,
+      precisionFactor,
+      minBankValue,
+      bankFee,
+      devFee,
+      bankERGAmount,
+      Some(
+        ErgoToken(
+          hodlBox.getTokens.get(2).getId,
+          hodlBox.getTokens.get(2).getValue - userBoxAmount - devFeeAmount
+        )
+      )
+    )
+
+    val recipientBox = outBoxObj.tokenOutBox(
+      Array(
+        ErgoToken(hodlBox.getTokens.get(2).getId, userBoxAmount / 2)
+      ), // <-- this is changed
+      userAddress
+    )
+
+    val recipientBox2 = outBoxObj.tokenOutBox(
+      Array(
+        ErgoToken(hodlBox.getTokens.get(2).getId, userBoxAmount / 2)
+      ), // <-- this is changed
+      Address.create(
+        "9gNYeyfRFUipiWZ3JR1ayDMoeh28E6J7aDQosb7yrzsuGSDqzCC" // <-- this is changed
+      )
+    )
+
+    val devFeeBox =
+      outBoxObj.tokenOutBox(
+        Array(ErgoToken(hodlBox.getTokens.get(2).getId, devFeeAmount)),
+        defaultFeeTokenContract.toAddress
+      )
+
+    val unsignedTransaction = txHelper.buildUnsignedTransaction(
+      inputs = Array(hodlBox, proxyInput),
+      outputs = Array(
+        hodlOutBox,
+        recipientBox,
+        recipientBox2,
+        devFeeBox
+      ), // <-- this is changed
+      fee = minerFee
+    )
+
+    the[Exception] thrownBy {
+      txHelper.signTransaction(unsignedTransaction)
+    } should have message "Script reduced to false"
+  }
+
   "ProxyTokenRefund" should "work correctly when all conditions are satisfied" in {
 
-    val ergMintAmount = 40L
+    val amountBaseTokenRequired = 20
     // note that the buyer has to sign their own refund tx
     val txHelper = new TransactionHelper(
       ctx,
@@ -896,139 +921,6 @@ class ProxyTokenSpec
     val fundingBox = outBoxObj
       .simpleOutBox(userAddress, recommendedMinerFee)
       .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val proxyInput = outBoxObj
-      .proxyMintInputBox(
-        proxyTokenContract,
-        userAddress,
-        hodlBankSingleton,
-        dummyHodlTokens,
-        minBoxValue,
-        minerFee,
-        minTxOperatorFee,
-        ergMintAmount + minBoxValue + minerFee + minTxOperatorFee
-      )
-      .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val recipientBox = outBoxObj.simpleOutBox(
-      userAddress,
-      proxyInput.getValue
-    )
-
-    val unsignedTransaction = txHelper.buildUnsignedTransaction(
-      inputs = Array(fundingBox, proxyInput),
-      outputs = Array(recipientBox),
-      fee = recommendedMinerFee
-    )
-
-    noException shouldBe thrownBy {
-      txHelper.signTransaction(
-        unsignedTransaction
-      )
-
-    }
-  }
-
-  "ProxyTokenRefund" must "function properly irrespective of the input order, given all conditions are met" in {
-
-    val ergMintAmount = 40L
-    // note that the buyer has to sign their own refund tx
-    val txHelper = new TransactionHelper(
-      ctx,
-      "pond trick believe salt obscure wool end state thing fringe reunion legend quarter popular oak",
-      ""
-    )
-    val userAddress = txHelper.senderAddress
-
-    val fundingBox = outBoxObj
-      .simpleOutBox(userAddress, recommendedMinerFee)
-      .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val proxyInput = outBoxObj
-      .proxyMintInputBox(
-        proxyTokenContract,
-        userAddress,
-        hodlBankSingleton,
-        dummyHodlTokens,
-        minBoxValue,
-        minerFee,
-        minTxOperatorFee,
-        ergMintAmount + minBoxValue + minerFee + minTxOperatorFee
-      )
-      .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val recipientBox = outBoxObj.simpleOutBox(
-      userAddress,
-      proxyInput.getValue
-    )
-
-    val unsignedTransaction = txHelper.buildUnsignedTransaction(
-      inputs = Array(proxyInput, fundingBox),
-      outputs = Array(recipientBox),
-      fee = recommendedMinerFee
-    )
-
-    noException shouldBe thrownBy {
-      txHelper.signTransaction(
-        unsignedTransaction
-      )
-
-    }
-  }
-
-  "ProxyTokenRefund" must "fail when signed by someone other than the buyer" in {
-
-    val ergMintAmount = 40L
-
-    val fundingBox = outBoxObj
-      .simpleOutBox(userAddress, recommendedMinerFee)
-      .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val proxyInput = outBoxObj
-      .proxyMintInputBox(
-        proxyTokenContract,
-        userAddress,
-        hodlBankSingleton,
-        dummyHodlTokens,
-        minBoxValue,
-        minerFee,
-        minTxOperatorFee,
-        ergMintAmount + minBoxValue + minerFee + minTxOperatorFee
-      )
-      .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val recipientBox = outBoxObj.simpleOutBox(
-      userAddress,
-      proxyInput.getValue
-    )
-
-    val unsignedTransaction = txHelper.buildUnsignedTransaction(
-      inputs = Array(proxyInput, fundingBox),
-      outputs = Array(recipientBox),
-      fee = recommendedMinerFee
-    )
-
-    the[AssertionError] thrownBy {
-      txHelper.signTransaction(unsignedTransaction)
-    }
-
-  }
-
-  "ProxyTokenMintRefundWithToken" should "work correctly when all conditions are satisfied" in {
-
-    // note that the buyer has to sign their own refund tx
-    val txHelper = new TransactionHelper(
-      ctx,
-      "pond trick believe salt obscure wool end state thing fringe reunion legend quarter popular oak",
-      ""
-    )
-    val userAddress = txHelper.senderAddress
-
-    val fundingBox = outBoxObj
-      .simpleOutBox(userAddress, recommendedMinerFee)
-      .convertToInputWith(fakeTxId1, fakeIndex)
-
-    val amountBaseTokenRequired = 100L
 
     val proxyInput = outBoxObj
       .proxyMintInputBox(
@@ -1044,9 +936,10 @@ class ProxyTokenSpec
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
-    val recipientBox = outBoxObj.hodlMintBox(
+    val recipientBox = outBoxObj.tokenOutBox(
+      Array(new ErgoToken(baseTokenId, amountBaseTokenRequired)),
       userAddress,
-      proxyInput.getTokens.get(0)
+      recommendedMinerFee
     )
 
     val unsignedTransaction = txHelper.buildUnsignedTransaction(
@@ -1063,9 +956,9 @@ class ProxyTokenSpec
     }
   }
 
-  "ProxyTokenRefundWithToken" should "work correctly when all conditions are satisfied" in {
+  "ProxyTokenRefund" should "function properly irrespective of the input order, given all conditions are met" in {
 
-    val ergMintAmount = 40L
+    val amountBaseTokenRequired = 20
     // note that the buyer has to sign their own refund tx
     val txHelper = new TransactionHelper(
       ctx,
@@ -1079,7 +972,7 @@ class ProxyTokenSpec
       .convertToInputWith(fakeTxId1, fakeIndex)
 
     val proxyInput = outBoxObj
-      .proxyBurnInputBox(
+      .proxyMintInputBox(
         proxyTokenContract,
         userAddress,
         hodlBankSingleton,
@@ -1087,17 +980,19 @@ class ProxyTokenSpec
         minBoxValue,
         minerFee,
         minTxOperatorFee,
-        ergMintAmount + minBoxValue + minerFee + minTxOperatorFee
+        minBoxValue + minerFee + minTxOperatorFee,
+        Some(new ErgoToken(baseTokenId, amountBaseTokenRequired))
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
-    val recipientBox = outBoxObj.hodlMintBox(
+    val recipientBox = outBoxObj.tokenOutBox(
+      Array(new ErgoToken(baseTokenId, amountBaseTokenRequired)),
       userAddress,
-      dummyHodlTokens
+      recommendedMinerFee
     )
 
     val unsignedTransaction = txHelper.buildUnsignedTransaction(
-      inputs = Array(fundingBox, proxyInput),
+      inputs = Array(proxyInput, fundingBox),
       outputs = Array(recipientBox),
       fee = recommendedMinerFee
     )
@@ -1108,6 +1003,47 @@ class ProxyTokenSpec
       )
 
     }
+  }
+
+  "ProxyTokenRefund" should "fail when signed by someone other than the buyer" in {
+
+    val amountBaseTokenRequired = 20
+    // note that the buyer has to sign their own refund tx
+
+    val fundingBox = outBoxObj
+      .simpleOutBox(userAddress, recommendedMinerFee)
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val proxyInput = outBoxObj
+      .proxyMintInputBox(
+        proxyTokenContract,
+        userAddress,
+        hodlBankSingleton,
+        dummyHodlTokens,
+        minBoxValue,
+        minerFee,
+        minTxOperatorFee,
+        minBoxValue + minerFee + minTxOperatorFee,
+        Some(new ErgoToken(baseTokenId, amountBaseTokenRequired))
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val recipientBox = outBoxObj.tokenOutBox(
+      Array(new ErgoToken(baseTokenId, amountBaseTokenRequired)),
+      userAddress,
+      recommendedMinerFee
+    )
+
+    val unsignedTransaction = txHelper.buildUnsignedTransaction(
+      inputs = Array(fundingBox, proxyInput),
+      outputs = Array(recipientBox),
+      fee = recommendedMinerFee
+    )
+
+    the[AssertionError] thrownBy {
+      txHelper.signTransaction(unsignedTransaction)
+    }
+
   }
 
   "ProxyTokenRefundWithMultipleInputs" should "work correctly when all conditions are satisfied" in {
