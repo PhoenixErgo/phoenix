@@ -149,8 +149,6 @@ class ProxySpec
 
     val amountHodlToMint = hodlMintAmount(hodlBox, ergMintAmount)
 
-    println("amountHodlToMint: " + amountHodlToMint)
-
     val hodlOutBox = outBoxObj.hodlBankBox(
       phoenixContract,
       hodlSingleton,
