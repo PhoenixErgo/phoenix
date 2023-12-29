@@ -34,6 +34,7 @@ trait PhoenixCommon extends HttpClientTesting {
   val minMinerFeeNanoErg = 1600000L
 
   val fundingBoxValue: Long = 50000000 * 1000000000L
+  val tokenFundingBoxValue: Long = 2000000L
   val minBoxValue = 1000000L
   val minTxOperatorFee = 1000000L
 
@@ -173,6 +174,19 @@ trait PhoenixCommon extends HttpClientTesting {
     ergMintAmt * precisionFactor / price
   }
 
+  def divUp(operands: (BigInt, BigInt)): BigInt = {
+
+    val a: BigInt = operands._1 // Dividend
+    val b: BigInt = operands._2 // Divisor
+
+    if (b == 0) {
+      return -1
+    } else {
+      return (a + (b - 1)) / b
+    }
+
+  }
+
   /** @return amount of (nano) ERGs which can be released to when given amount of hodlcoins burnt to user,
     *          and also dev fee
     */
@@ -182,18 +196,34 @@ trait PhoenixCommon extends HttpClientTesting {
   ): (Long, Long, Long) = {
     val feeDenom = 1000L
 
-    val bankFee =
+    val bankFeeNum =
       hodlBoxIn.getRegisters.get(4).getValue.asInstanceOf[Long] // R8
-    val devFee = hodlBoxIn.getRegisters.get(3).getValue.asInstanceOf[Long] // R7
+    val devFeeNum = hodlBoxIn.getRegisters.get(3).getValue.asInstanceOf[Long] // R7
 
     val price = hodlTokenPrice(hodlBoxIn)
     val precisionFactor = extractPrecisionFactor(hodlBoxIn)
-    val beforeFees = hodlBurnAmt * price / precisionFactor
-    val bankFeeAmount: Long = (beforeFees * bankFee) / feeDenom
-    val devFeeAmount: Long = (beforeFees * devFee) / feeDenom
-    val expectedAmountWithdrawn: Long =
-      beforeFees - bankFeeAmount - devFeeAmount
-    (expectedAmountWithdrawn, devFeeAmount, bankFeeAmount)
+
+
+    val expectedAmountBeforeFees = hodlBurnAmt * price / precisionFactor
+
+    val dividend_1: BigInt = (BigInt(expectedAmountBeforeFees) * (BigInt(bankFeeNum) + BigInt(devFeeNum)))
+    val divisor_1: BigInt =  BigInt(feeDenom) // This is never zero.
+
+    val bankFeeAndDevFeeAmount: BigInt = divUp((dividend_1, divisor_1)) // Y
+
+    val dividend_2: BigInt = (bankFeeAndDevFeeAmount * BigInt(devFeeNum))
+    val divisor_2: BigInt = (BigInt(bankFeeNum) + BigInt(devFeeNum)) // This is never zero, devFeeNum can be zero but bankFeeNum cannot.
+
+    val devFeeAmount: BigInt = divUp((dividend_2, divisor_2)) // Z
+    val bankFeeAmount: BigInt = bankFeeAndDevFeeAmount - devFeeAmount // Y - Z
+
+
+    val devFeeAmountAdjusted: BigInt = if (bankFeeAmount == BigInt(0)) BigInt(0) else devFeeAmount
+    val bankFeeAmountAdjusted: BigInt = if (bankFeeAmount == BigInt(0)) devFeeAmount else bankFeeAmount
+
+    val expectedAmountWithdrawn: BigInt =
+      expectedAmountBeforeFees - bankFeeAmountAdjusted - devFeeAmountAdjusted
+    (expectedAmountWithdrawn.toLong, devFeeAmountAdjusted.toLong, bankFeeAmountAdjusted.toLong)
   }
 
   def hodlTokenPrice(hodlBoxIn: InputBox): Long = {
