@@ -633,6 +633,102 @@ class ProxyTokenSpec
 
   }
 
+  "PhoenixTokenBurnOperationWithProxy" should "work correctly when one unit of token is burned" in {
+
+    val hodlTokenBurnAmount = 1
+
+    val hodlTokens =
+      new ErgoToken(
+        hodlTokenId,
+        baseTokenTotalSupply - 2000000L
+      ) // note same value is subtracted as token amount below
+    val baseTokens = new ErgoToken(baseTokenId, 2000000L)
+
+    val hodlBox = outBoxObj
+      .hodlBankBox(
+        phoenixTokenContract,
+        hodlBankSingleton,
+        hodlTokens,
+        baseTokenTotalSupply,
+        precisionFactor,
+        minBankValue,
+        bankFee,
+        devFee,
+        bankERGAmount,
+        Some(baseTokens)
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val (userBoxAmount, devFeeAmount, bankFeeAmount) =
+      burnTokenAmount(hodlBox, hodlTokenBurnAmount)
+
+    val proxyInput = outBoxObj
+      .proxyBurnInputBox(
+        proxyTokenContract,
+        userAddress,
+        hodlBankSingleton,
+        new ErgoToken(hodlTokenId, hodlTokenBurnAmount),
+        minBoxValue,
+        minerFee,
+        minTxOperatorFee,
+        minerFee + minTxOperatorFee // <-- note extra fees must not be added
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    // #1 minBoxValue is for recipient box
+    // #2 minBoxValue is for dev fee box
+
+    val hodlOutBox = outBoxObj.hodlBankBox(
+      phoenixTokenContract,
+      hodlBankSingleton,
+      new ErgoToken(
+        hodlTokenId,
+        hodlBox.getTokens.get(1).getValue + proxyInput.getTokens.get(0).getValue
+      ),
+      baseTokenTotalSupply,
+      precisionFactor,
+      minBankValue,
+      bankFee,
+      devFee,
+      bankERGAmount,
+      Some(
+        ErgoToken(
+          hodlBox.getTokens.get(2).getId,
+          hodlBox.getTokens.get(2).getValue - userBoxAmount - devFeeAmount
+        )
+      )
+    )
+
+    val recipientBox = outBoxObj.tokenOutBox(
+      Array(ErgoToken(hodlBox.getTokens.get(2).getId, userBoxAmount)),
+      userAddress
+    )
+
+    val devFeeBox =
+      outBoxObj.tokenOutBox(
+        Array(ErgoToken(hodlBox.getTokens.get(2).getId, devFeeAmount)),
+        defaultFeeTokenContract.toAddress
+      )
+
+    val unsignedTransaction = txHelper.buildUnsignedTransaction(
+      inputs = Array(hodlBox, proxyInput),
+      outputs =
+        if (userBoxAmount > 0 && devFeeAmount > 0)
+          Array(hodlOutBox, recipientBox, devFeeBox)
+        else if (userBoxAmount > 0 && devFeeAmount == 0)
+          Array(hodlOutBox, recipientBox)
+        else Array(hodlOutBox),
+      fee = minerFee
+    )
+
+    noException shouldBe thrownBy {
+      txHelper.signTransaction(
+        unsignedTransaction
+      )
+    }
+
+  }
+
   "PhoenixTokenBurnOperationWithProxy" should "fail when offchain code does not use the specified miner fee" in {
 
     val hodlTokenBurnAmount = 20
