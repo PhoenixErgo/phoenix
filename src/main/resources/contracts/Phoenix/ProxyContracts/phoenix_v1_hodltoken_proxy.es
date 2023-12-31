@@ -4,7 +4,7 @@
     // Name: Phoenix HodlToken Proxy
     // Description: Contract guarding the proxy box for the hodlToken protocol.
     // Version: 1.0.0
-    // Author: Luca D'Angelo (ldgaetano@protonmail.com), MGpai
+    // Author: Luca D'Angelo (ldgaetano@protonmail.com), MGPai
 
     // ===== Box Contents ===== //
     // Tokens
@@ -30,6 +30,7 @@
     // Outputs: Bank, BuyerPK, PhoenixFee, MinerFee, TxOperatorFee
     // Context Variables: None
     // 3. Reserve Deposit Tx
+    // TODO: Insert documentation here and implmement proxy logic.
     // 4. Refund Tx
     // Inputs: Proxy
     // Data Inputs: None
@@ -87,13 +88,13 @@
         val hodlTokensCircDelta: Long = hodlTokensIn - hodlTokensOut
         val isMintTx: Boolean         = (hodlTokensCircDelta > 0L)
 
-        // Outputs
-        val buyerPKBoxOUT: Box = OUTPUTS(1)
-
         if (isMintTx) {
 
             // ===== Mint Tx ===== //
             val validMintTx: Boolean = {
+
+                // Outputs
+                val buyerPKBoxOUT: Box = OUTPUTS(1)
 
                 val txOperatorFeeBoxOUT: Box = OUTPUTS(OUTPUTS.size-1)
 
@@ -146,19 +147,26 @@
                 val hodlTokensBurned: Long = hodlTokensOut - hodlTokensIn
                 val devAndUserAmount: Long = reserveIn - reserveOut // Base tokens are removed from the bank.
                 val devAmount: Long = if (OUTPUTS.size == 5) OUTPUTS(2).tokens(0)._2 else 0L // OUTPUTS(2) is phoenixFeeBoxOUT, if there are 5 total outputs.
-                val userAmount: Long = buyerPKBoxOUT.tokens(0)._2
-
                 val validBurn: Boolean = (hodlTokensBurned == SELF.tokens(0)._2)
 
                 val validBuyerBoxOUT: Boolean = {
 
-                    val validBaseTokenTransfer: Boolean = (devAndUserAmount == devAmount + userAmount)
-                    val validContract: Boolean = (buyerPKBoxOUT.propositionBytes == buyerPK.propBytes)
+                    if ((OUTPUTS.size == 5) || (OUTPUTS.size == 4)) {
 
-                    allOf(Coll(
-                        validBaseTokenTransfer,
-                        validContract
-                    ))
+                        val buyerPKBoxOUT: Box = OUTPUTS(1)
+
+                        val userAmount: Long = buyerPKBoxOUT.tokens(0)._2
+                        val validBaseTokenTransfer: Boolean = (devAndUserAmount == devAmount + userAmount)
+                        val validContract: Boolean = (buyerPKBoxOUT.propositionBytes == buyerPK.propBytes)
+
+                        allOf(Coll(
+                            validBaseTokenTransfer,
+                            validContract
+                        ))
+
+                    } else {
+                        true
+                    }
 
                 }
 
