@@ -2,7 +2,7 @@ package execute
 
 import configs.{conf, serviceOwnerConf}
 import contracts.PhoenixContracts
-import execute.DataHandling.{sortProxyInputs, validateBox}
+import execute.DataHandling.{sortProxyInputs, validateBox, validateTokenBox}
 import org.ergoplatform.appkit.InputBox
 import org.ergoplatform.sdk.ErgoToken
 import special.collection.Coll
@@ -63,24 +63,38 @@ class akkaFunctions {
         )
         .items
 
-    mintHodlERGWithRetry(hodlTokenBoxes)
+    processHodlERGWithRetry(hodlERGboxes)
+    processHodlTokenWithRetry(hodlTokenBoxes)
 
   }
 
-  def mintHodlERGWithRetry(boxes: Array[BoxJson]): Unit = {
+  def processHodlERGWithRetry(boxes: Array[BoxJson]): Unit = {
     try {
-      hodlTokenMint(boxes) // Call the mint function
+      processHodlErg(boxes) // Call the mint function
     } catch {
       case _: Throwable => // Catch any error thrown
         if (boxes.nonEmpty) {
-          mintHodlERGWithRetry(
+          processHodlERGWithRetry(
             boxes.tail
           ) // Call mintWithRetry with the first element deleted from the boxes array
         }
     }
   }
 
-  def mint(boxes: Array[BoxJson]): Unit = {
+  def processHodlTokenWithRetry(boxes: Array[BoxJson]): Unit = {
+    try {
+      processHodlToken(boxes) // Call the mint function
+    } catch {
+      case _: Throwable => // Catch any error thrown
+        if (boxes.nonEmpty) {
+          processHodlTokenWithRetry(
+            boxes.tail
+          ) // Call mintWithRetry with the first element deleted from the boxes array
+        }
+    }
+  }
+
+  def processHodlErg(boxes: Array[BoxJson]): Unit = {
     val validatedBoxInputs: Array[InputBox] = boxes
       .filter(box => {
 //        box.ergoTree = "10010101d17300" // for debugging with sigmaProp(true) ergotree
@@ -94,7 +108,7 @@ class akkaFunctions {
       .map(boxAPIObj.convertJsonBoxToInputBox)
 
     if (validatedBoxInputs.isEmpty) {
-      println("No Valid Boxes Found")
+      println("[holdErg] No Valid Boxes Found")
       return
     }
 
@@ -161,21 +175,31 @@ class akkaFunctions {
 
   }
 
-  def hodlTokenMint(boxes: Array[BoxJson]): Unit = {
+  def processHodlToken(boxes: Array[BoxJson]): Unit = {
     val validatedBoxInputs: Array[InputBox] = boxes
       .filter(box => {
         //        box.ergoTree = "10010101d17300" // for debugging with sigmaProp(true) ergotree
-        validateBox(
+        validateTokenBox(
           box,
           serviceConf.minBoxValue,
           serviceConf.minMinerFee,
-          serviceConf.minTxOperatorFee
+          serviceConf.minTxOperatorFee,
+          Array(
+            new ErgoToken(
+              "7402ce4755a154cf4e4794168c69df3e33de14ff333e39ba5bdef0d892537df6",
+              1
+            ),
+            new ErgoToken(
+              "0624ab9cfdcb83a15f3648ff07e96ac44404e3cd19f76e1476a46a4c57466daa",
+              1
+            )
+          )
         )
       })
       .map(boxAPIObj.convertJsonBoxToInputBox)
 
     if (validatedBoxInputs.isEmpty) {
-      println("No Valid Boxes Found")
+      println("[holdToken] No Valid Boxes Found")
       return
     }
 
