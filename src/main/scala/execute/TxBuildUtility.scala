@@ -378,7 +378,7 @@ class TxBuildUtility(
               case e: DoubleSpendingError  => return Left(e.getMessage)
               case e: TransactionInMempool => return Left(e.getMessage)
               case e: Exception =>
-                return Left("[hodlErg] error submitting hodlMint tx: " + e.getMessage)
+                return Left("[hodlErg] error submitting burn tx: " + e.getMessage)
             }
 
           println("[hodlErg] Burn Transaction Submitted: " + txHash)
