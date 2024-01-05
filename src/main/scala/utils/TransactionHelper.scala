@@ -1,5 +1,11 @@
 package utils
 
+import configs.JsonParser.{
+  getJsonFromErrorMsg,
+  isDoubleSpendingError,
+  isTxInMempoolError
+}
+import configs.{SignedTransactionJsonParser, UnsignedTransactionJsonParser}
 import org.ergoplatform.appkit.{
   Address,
   BlockchainContext,
@@ -10,6 +16,12 @@ import org.ergoplatform.appkit.{
   UnsignedTransaction
 }
 import org.ergoplatform.sdk.{ErgoToken, SecretString}
+import play.api.libs.json.{JsValue, Json}
+
+import scala.collection.JavaConversions.`deprecated asScalaBuffer`
+
+class DoubleSpendingError(message: String) extends Exception(message)
+class TransactionInMempool(message: String) extends Exception(message)
 
 class TransactionHelper(
     ctx: BlockchainContext,
@@ -63,8 +75,46 @@ class TransactionHelper(
       .build()
     prover.sign(unsignedTransaction)
   }
+  def getUnsignedJson(
+      unsignedTransaction: UnsignedTransaction,
+      prettyPrint: Boolean = true
+  ): String = {
+    val unsignedJson = UnsignedTransactionJsonParser.readJsonString(
+      unsignedTransaction.toJson(prettyPrint)
+    )
+    unsignedTransaction.getOutputs.zipWithIndex.foreach { case (out, index) =>
+      unsignedJson.outputs(index).ergoTree = out.getErgoTree.bytesHex
+    }
+    UnsignedTransactionJsonParser.toJsonString(unsignedJson, prettyPrint)
+  }
+
+  def getSignedJson(
+      signedTransaction: SignedTransaction,
+      prettyPrint: Boolean = true
+  ): String = {
+    val signedJson = SignedTransactionJsonParser.readJsonString(
+      signedTransaction.toJson(prettyPrint)
+    )
+    signedTransaction.getOutputs.zipWithIndex.foreach { case (out, index) =>
+      signedJson.outputs(index).ergoTree = out.getErgoTree.bytesHex
+    }
+    SignedTransactionJsonParser.toJsonString(signedJson, prettyPrint)
+  }
+
   def sendTx(signedTransaction: SignedTransaction): String = {
-    this.ctx.sendTransaction(signedTransaction)
+    try {
+      this.ctx.sendTransaction(signedTransaction)
+    } catch {
+      case e: Exception =>
+        val errorMsg = Option(e.getMessage).getOrElse("")
+        getJsonFromErrorMsg(errorMsg) match {
+          case Some(json) if isDoubleSpendingError(json) =>
+            throw new DoubleSpendingError("double-spending-error")
+          case Some(json) if isTxInMempoolError(json) =>
+            throw new TransactionInMempool("tx-in-mempool-error")
+          case _ => throw e
+        }
+    }
   }
 
   def createToken(

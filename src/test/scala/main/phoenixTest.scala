@@ -1,42 +1,89 @@
 package main
 
+import configs.serviceOwnerConf
+import contracts.PhoenixContracts
 import execute.Client
 import execute.HodlCalulations.{hodlMintAmountFromERG, hodlPrice}
-import org.ergoplatform.appkit.InputBox
+import initialize.initializeToken.serviceFilePath
+import org.ergoplatform.appkit.{ErgoContract, InputBox}
 import org.ergoplatform.appkit.impl.InputBoxImpl
+import org.ergoplatform.sdk.ErgoToken
 import utils.{ContractCompile, explorerApi}
 
 object phoenixTest extends App {
   private val client: Client = new Client()
   client.setClient
   private val ctx = client.getContext
-  val contractString = contracts.PhoenixContracts.phoenix_v1_hodlcoin_bank.contractScript
+  val contractString =
+    contracts.PhoenixContracts.phoenix_v1_hodlcoin_bank.contractScript
   val compilerObj = new ContractCompile(ctx)
 
   val dummyContractString = "sigmaProp(true)"
   val dummyContract = compilerObj.compileDummyContract(dummyContractString)
 
-  val contract = compilerObj.compileBankContract(contractString, dummyContract)
+  println(dummyContract.getErgoTree.bytesHex)
+
+  val contract = compilerObj.compileProxyContract(
+    contracts.PhoenixContracts.phoenix_v1_hodlcoin_proxy.contractScript,
+    1000000L
+  )
 
   println(contract.getErgoTree.bytes.length)
 
 }
 
-object priceTest extends App {
-  val inputBoxId = "785d02cb5bd1505c793585eed315ac923633fbf9164401d22fa8fd70dd7c4afc"
-  val exp = new explorerApi()
-  val box = new InputBoxImpl(exp.getErgoBoxfromID(inputBoxId))
-    .asInstanceOf[InputBox]
+object bank extends App {
+  private val client: Client = new Client()
+  client.setClient
+  private val ctx = client.getContext
+  val contractString =
+    PhoenixContracts.phoenix_v1_hodltoken_bank.contractScript
 
-  val txOperatorFee = 1000000L
-  val minerFee = 1000000L
+  val feeContractScript =
+    PhoenixContracts.phoenix_v1_hodltoken_feeTest_testnet.contractScript
+  val compilerObj = new ContractCompile(ctx)
 
-  val price = hodlPrice(box)
-  val amntERGPaid = 1005968000L + minerFee
-  val amntERGAfterFees = amntERGPaid - txOperatorFee - minerFee
-  val hodlMintAmount = hodlMintAmountFromERG(box, amntERGAfterFees)
+  val dummyContractString = "sigmaProp(true)"
+  val dummyContract = compilerObj.compileDummyContract(dummyContractString)
+  val serviceFilePath = "serviceOwner.json"
+  val serviceConf = serviceOwnerConf.read(serviceFilePath)
 
-  println(hodlMintAmount)
+  val comet = new ErgoToken(
+    "0014dfe03c2a58d604e8d8e1fc73b68fac7512f0672d8e086a1af4d0c401b6e1",
+    1L
+  )
 
-  println(price)
+  private val feeContract: ErgoContract = compilerObj.compileFeeTokenContract(
+    feeContractScript,
+    serviceConf.minMinerFee,
+    comet,
+    25L,
+    25L,
+    25L
+  )
+
+  val contract = compilerObj.compileBankContract(
+    contractString,
+    feeContract
+  )
+
+  println(contract.getErgoTree.bytesHex)
+
+}
+
+object proxyContract extends App {
+  private val client: Client = new Client()
+  client.setClient
+  private val ctx = client.getContext
+  val compilerObj = new ContractCompile(ctx)
+
+  val contractString = PhoenixContracts.phoenix_v1_hodlcoin_proxy.contractScript //PhoenixContracts.phoenix_v1_hodltoken_proxy.contractScript
+
+  val contract = compilerObj.compileProxyContract(
+    contractString,
+    1000000L
+  )
+
+  println(contract.getErgoTree.bytesHex)
+
 }

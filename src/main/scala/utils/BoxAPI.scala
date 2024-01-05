@@ -9,7 +9,7 @@ import com.google.gson.{
   JsonElement
 }
 import com.google.gson.reflect.TypeToken
-import configs.{AvlJson, serviceOwnerConf}
+import configs.{AvlJson, ContractsConfig, serviceOwnerConf}
 import org.apache.http.HttpHeaders
 import org.apache.http.client.methods.{HttpGet, HttpPost}
 import org.apache.http.entity.{ContentType, StringEntity}
@@ -21,6 +21,7 @@ import org.ergoplatform.appkit.impl.{InputBoxImpl, ScalaBridge}
 import org.ergoplatform.explorer.client.model.OutputInfo
 import org.ergoplatform.restapi.client.{Asset, ErgoTransactionOutput, Registers}
 
+import java.io.{FileWriter, Writer}
 import scala.collection.JavaConverters._
 import java.util.ArrayList
 import scala.collection.mutable.ListBuffer
@@ -29,6 +30,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future, Promise}
+import scala.io.Source
 import scala.util.{Failure, Success}
 
 case class RawResponse(
@@ -60,7 +62,7 @@ case class BoxJson(
     globalIndex: Int,
     creationHeight: Int,
     settlementHeight: Int,
-    ergoTree: String,
+    var ergoTree: String,
     ergoTreeConstants: String,
     ergoTreeScript: String,
     address: String,
@@ -69,6 +71,22 @@ case class BoxJson(
     spentTransactionId: String,
     mainChain: Boolean
 )
+
+object raw {
+  private val gson = new GsonBuilder().setPrettyPrinting().create()
+
+  def read(filePath: String): RawResponse = {
+    val jsonString: String = Source.fromFile(filePath).mkString
+    gson.fromJson(jsonString, classOf[RawResponse])
+  }
+
+  def write(filePath: String, newConfig: RawResponse): Unit = {
+    val writer: Writer = new FileWriter(filePath)
+    writer.write(this.gson.toJson(newConfig))
+    writer.close()
+  }
+
+}
 
 case class UnspentBoxJson(
     boxId: String,
@@ -268,12 +286,14 @@ class BoxAPI(apiUrl: String, nodeUrl: String) {
       val response = client.execute(get)
       val resp = EntityUtils.toString(response.getEntity)
 
+
       if (resp == "[]") {
 
         return RawResponse(allBoxes, 0)
       }
 
       val liliumResponseEntry = gson.fromJson(resp, classOf[RawResponse])
+//      raw.write("box.json", liliumResponseEntry)
       allBoxes = allBoxes ++ liliumResponseEntry.items
 
       if (!selectAll && allBoxes.length >= amountToSelect) {
@@ -288,6 +308,7 @@ class BoxAPI(apiUrl: String, nodeUrl: String) {
     }
 
     RawResponse(allBoxes, allBoxes.length)
+//    raw.read("box.json")
   }
 
 //  def getUnconfirmedInputsByBoxId(

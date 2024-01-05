@@ -55,11 +55,18 @@ sealed trait PhoenixContracts extends EnumEntry {
 object PhoenixContracts extends Enum[PhoenixContracts] {
   val values: immutable.IndexedSeq[PhoenixContracts] = findValues
   case object phoenix_v1_hodlcoin_bank extends BoxGuardScriptContract
+  case object phoenix_v1_hodltoken_bank extends BoxGuardScriptContract
   case object phoenix_v1_hodlcoin_fee extends BoxGuardScriptContract
+  case object phoenix_v1_hodltoken_fee extends BoxGuardScriptContract
   case object phoenix_v1_hodlcoin_feeTest extends BoxGuardScriptContract
   case object phoenix_v1_hodlcoin_feeTest_mainnet extends BoxGuardScriptContract
+  case object phoenix_v1_hodltoken_feeTest_mainnet extends BoxGuardScriptContract
+  case object phoenix_v1_hodltoken_feeTest_testnet extends BoxGuardScriptContract
   case object phoenix_v1_hodlcoin_proxy
       extends ProxyContractBoxGuardScriptContract
+
+  case object phoenix_v1_hodltoken_proxy
+    extends ProxyContractBoxGuardScriptContract
 }
 
 sealed trait BoxContract extends PhoenixContracts {
