@@ -1,10 +1,8 @@
 package execute
 
-import execute.HodlCalulations.{extractPrecisionFactor, hodlPrice}
 import org.ergoplatform.appkit.{Address, InputBox, NetworkType}
 import org.ergoplatform.sdk.ErgoToken
 import special.collection.Coll
-import swaydb.Exception.InvalidAccessException
 import utils.BoxJson
 
 import scala.collection.JavaConverters._
@@ -139,6 +137,24 @@ object DataHandling {
     box.additionalRegisters.R7.renderedValue.toLong >= minBoxValue &&
     box.additionalRegisters.R8.renderedValue.toLong >= minerFee &&
     box.additionalRegisters.R9.renderedValue.toLong >= minTxOperatorFee
+  }
+
+  def validateTokenBox(
+      box: BoxJson,
+      minBoxValue: Long,
+      minerFee: Long,
+      minTxOperatorFee: Long,
+      tokens: Array[ErgoToken]
+  ): Boolean = {
+    box.additionalRegisters.R4 != null &&
+    box.additionalRegisters.R5.serializedValue != null &&
+    box.additionalRegisters.R6.serializedValue != null &&
+    box.additionalRegisters.R7.renderedValue.toLong >= minBoxValue &&
+    box.additionalRegisters.R8.renderedValue.toLong >= minerFee &&
+    box.additionalRegisters.R9.renderedValue.toLong >= minTxOperatorFee &&
+    tokens.exists(token =>
+      box.assets.map(_.tokenId).contains(token.getId.toString())
+    )
   }
 
 }
