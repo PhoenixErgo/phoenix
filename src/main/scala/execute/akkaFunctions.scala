@@ -192,6 +192,14 @@ class akkaFunctions {
             new ErgoToken(
               "0624ab9cfdcb83a15f3648ff07e96ac44404e3cd19f76e1476a46a4c57466daa",
               1
+            ),
+            new ErgoToken(
+              "7c77193797347809d9482b716d017310c0d987b74f4f2bc931e48ba97e0ea586",
+              1
+            ),
+            new ErgoToken(
+              "7ced94bf0753e4f8815637a3552a05f5605acc4727e1137613c9e9e8f78a1a36",
+              1
             )
           )
         )
