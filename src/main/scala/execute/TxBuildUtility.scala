@@ -1,8 +1,13 @@
 package execute
 
 import contracts.PhoenixContracts
-import execute.DataHandling.{burnAmount, extractInputData}
-import execute.HodlCalulations.hodlMintAmountFromERG
+import execute.DataHandling.extractInputData
+import execute.HodlCalulations.{
+  burnAmount,
+  burnTokenAmount,
+  hodlMintAmountFromERG,
+  hodlTokenMintAmount
+}
 import org.ergoplatform.appkit.{
   Address,
   BlockchainContext,
@@ -12,8 +17,6 @@ import org.ergoplatform.appkit.{
 }
 import org.ergoplatform.sdk.ErgoToken
 import utils.{
-  BoxAPI,
-  BoxJson,
   ContractCompile,
   DoubleSpendingError,
   OutBoxes,
@@ -23,8 +26,6 @@ import utils.{
 }
 
 import scala.collection.JavaConverters._
-import scala.reflect.runtime.universe.Try
-import scala.util.{Failure, Success}
 
 class TxBuildUtility(
     val ctx: BlockchainContext,
@@ -41,19 +42,6 @@ class TxBuildUtility(
   )
   val compiler = new ContractCompile(ctx)
   val explorer = new explorerApi()
-
-  private val feeScript: String = {
-    if (ctx.getNetworkType == NetworkType.MAINNET) {
-      PhoenixContracts.phoenix_v1_hodlcoin_fee.contractScript
-    } else {
-      PhoenixContracts.phoenix_v1_hodlcoin_feeTest.contractScript
-    }
-  }
-
-  private val feeContract: ErgoContract = compiler.compileFeeContract(
-    feeScript,
-    minMinerFee
-  )
 
   def process(
       conversionFunc: (InputBox, InputBox) => Either[String, Option[InputBox]]
@@ -87,21 +75,21 @@ class TxBuildUtility(
       case Right(res: ExtractionResult) =>
         val result = for {
           recipientAddress <- res.recipientAddress.toRight(
-            "Recipient address not found"
+            "[hodlErg] Recipient address not found"
           )
-          hodlSingleton <- res.hodlSingleton.toRight("singleton not found")
-          hodlTokenId <- res.hodlTokenId.toRight("hodl token not found")
+          hodlSingleton <- res.hodlSingleton.toRight("[hodlErg] singleton not found")
+          hodlTokenId <- res.hodlTokenId.toRight("[hodlErg] hodl token not found")
           totalTokenSupply <- res.totalTokenSupply.toRight(
-            "total token supply not found"
+            "[hodlErg] total token supply not found"
           )
-          precisionFactor <- res.precisionFactor.toRight("precision not found")
-          minBankValue <- res.minBankValue.toRight("min bank value not found")
-          devFee <- res.devFee.toRight("dev fee not found")
-          bankFee <- res.bankFee.toRight("bank fee not found")
-          minBoxValue <- res.minBoxValue.toRight("min box value not found")
-          minerFee <- res.minerFee.toRight("miner fee not found")
+          precisionFactor <- res.precisionFactor.toRight("[hodlErg] precision not found")
+          minBankValue <- res.minBankValue.toRight("[hodlErg] min bank value not found")
+          devFee <- res.devFee.toRight("[hodlErg] dev fee not found")
+          bankFee <- res.bankFee.toRight("[hodlErg] bank fee not found")
+          minBoxValue <- res.minBoxValue.toRight("[hodlErg] min box value not found")
+          minerFee <- res.minerFee.toRight("[hodlErg] miner fee not found")
           txOperatorFee <- res.txOperatorFee.toRight(
-            "tx operator fee not found"
+            "[hodlErg] tx operator fee not found"
           )
         } yield {
 
@@ -110,7 +98,7 @@ class TxBuildUtility(
               proxyInput.getValue - minBoxValue - minerFee - txOperatorFee
             } catch {
               case e: Exception =>
-                return Left("ergMintAmount could not be calculated")
+                return Left("[hodlErg] ergMintAmount could not be calculated")
             }
 
           val hodlMintAmount =
@@ -121,7 +109,7 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("hodlMintAmount could not be calculated")
+                return Left("[hodlErg] hodlMintAmount could not be calculated")
             }
 
           val hodlOutBoxHodlTokenAmount =
@@ -131,7 +119,7 @@ class TxBuildUtility(
                 .getValue - hodlMintAmount
             } catch {
               case e: Exception =>
-                return Left("holdOutBoxHodlTokenAmount could not be calculated")
+                return Left("[hodlErg] holdOutBoxHodlTokenAmount could not be calculated")
             }
 
           val phoenixContract =
@@ -144,7 +132,7 @@ class TxBuildUtility(
                 .toErgoContract
             } catch {
               case e: Exception =>
-                return Left("error getting phoenix contract")
+                return Left("[hodlErg] error getting phoenix contract")
             }
 
           val hodlOutBox =
@@ -162,7 +150,7 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("error building hodlOutBox for mint")
+                return Left("[hodlErg] error building hodlOutBox mint")
             }
 
           val recipientBox =
@@ -173,7 +161,7 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("error building recipient box for hodlMint")
+                return Left("[hodlErg] error building recipient box for mint tx")
             }
 
           val unsignedTransaction =
@@ -185,7 +173,7 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("error building hodlMint tx")
+                return Left("[hodlErg] error building mint tx")
             }
 
           val signedTx =
@@ -195,7 +183,7 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("error signing hodlMint tx")
+                return Left("[hodlErg] error signing mint tx")
             }
 
           val txHash =
@@ -205,10 +193,10 @@ class TxBuildUtility(
               case e: DoubleSpendingError  => return Left(e.getMessage)
               case e: TransactionInMempool => return Left(e.getMessage)
               case e: Exception =>
-                return Left("error submitting hodlMint tx: " + e.getMessage)
+                return Left("[hodlErg] error submitting hodlMint tx: " + e.getMessage)
             }
 
-          println("Mint Transaction Submitted: " + txHash)
+          println("[hodlErg] Mint Transaction Submitted: " + txHash)
           Thread.sleep(500)
 
           signedTx.getOutputsToSpend.get(0)
@@ -230,25 +218,25 @@ class TxBuildUtility(
       case Right(res: ExtractionResult) =>
         for {
           recipientAddress <- res.recipientAddress.toRight(
-            "recipient address not found"
+            "[hodlErg] recipient address not found"
           )
-          hodlSingleton <- res.hodlSingleton.toRight("hodl singleton not found")
-          hodlTokenId <- res.hodlTokenId.toRight("hodl token id not found")
+          hodlSingleton <- res.hodlSingleton.toRight("[hodlErg] hodl singleton not found")
+          hodlTokenId <- res.hodlTokenId.toRight("[hodlErg] hodl token id not found")
           totalTokenSupply <- res.totalTokenSupply.toRight(
-            "total token supply not found"
+            "[hodlErg] total token supply not found"
           )
           precisionFactor <- res.precisionFactor.toRight(
-            "precision factor not found"
+            "[hodlErg] precision factor not found"
           )
           minBankValue <- res.minBankValue.toRight(
-            "minimum bank value not found"
+            "[hodlErg] minimum bank value not found"
           )
-          devFee <- res.devFee.toRight("developer fee not found")
-          bankFee <- res.bankFee.toRight("bank fee not found")
-          minBoxValue <- res.minBoxValue.toRight("minimum box value not found")
-          minerFee <- res.minerFee.toRight("miner fee not found")
+          devFee <- res.devFee.toRight("[hodlErg] developer fee not found")
+          bankFee <- res.bankFee.toRight("[hodlErg] bank fee not found")
+          minBoxValue <- res.minBoxValue.toRight("[hodlErg] minimum box value not found")
+          minerFee <- res.minerFee.toRight("[hodlErg] miner fee not found")
           txOperatorFee <- res.txOperatorFee.toRight(
-            "transaction operator fee not found"
+            "[hodlErg] transaction operator fee not found"
           )
         } yield {
 
@@ -257,7 +245,7 @@ class TxBuildUtility(
               new ErgoToken(hodlTokenId, 1L)
             } catch {
               case e: Exception =>
-                return Left("error building dummy token")
+                return Left("[hodlErg] burn error building dummy token")
             }
 
           val hodlBurnAmount =
@@ -270,7 +258,7 @@ class TxBuildUtility(
                 .sum
             } catch {
               case e: Exception =>
-                return Left("error finding dummy token")
+                return Left("[hodlErg] burn error finding dummy token")
             }
 
           val (userBoxAmount, devFeeAmount, bankFeeAmount) =
@@ -278,7 +266,7 @@ class TxBuildUtility(
               burnAmount(currentBankInput, hodlBurnAmount)
             } catch {
               case e: Exception =>
-                return Left("error calculating burn amount")
+                return Left("[hodlErg] burn error calculating burn amount")
             }
 
           val bankBoxOutAmount =
@@ -286,7 +274,7 @@ class TxBuildUtility(
               currentBankInput.getValue - userBoxAmount - devFeeAmount
             } catch {
               case e: Exception =>
-                return Left("error getting bank input value")
+                return Left("[hodlErg] burn error getting bank input value")
             }
 
           val hodlOutBoxHodlTokenAmount =
@@ -294,7 +282,7 @@ class TxBuildUtility(
               currentBankInput.getTokens.get(1).getValue + hodlBurnAmount
             } catch {
               case e: Exception =>
-                return Left("error getting bank tokens")
+                return Left("[hodlErg] burn error getting bank tokens")
             }
 
           val phoenixContract =
@@ -307,7 +295,7 @@ class TxBuildUtility(
                 .toErgoContract
             } catch {
               case e: Exception =>
-                return Left("error getting phoenix contract")
+                return Left("[hodlErg] burn error getting phoenix contract")
             }
 
           val hodlOutBox =
@@ -325,7 +313,7 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("error building hodlOutBox for burn")
+                return Left("[hodlErg] burn error building hodlOutBox for burn")
             }
 
           val recipientBox =
@@ -333,32 +321,34 @@ class TxBuildUtility(
               outBoxObj.simpleOutBox(recipientAddress, userBoxAmount)
             } catch {
               case e: Exception =>
-                return Left("error building recipient box for hodlERG burn")
+                return Left(
+                  "[hodlErg] burn error building recipient box for hodlERG burn"
+                )
             }
+
+          val feeScript: String = {
+            if (ctx.getNetworkType == NetworkType.MAINNET) {
+              PhoenixContracts.phoenix_v1_hodlcoin_fee.contractScript
+            } else {
+              PhoenixContracts.phoenix_v1_hodlcoin_feeTest.contractScript
+            }
+          }
+
+          val feeContract: ErgoContract = compiler.compileFeeContract(
+            feeScript,
+            minMinerFee
+          )
 
           val devFeeBox =
             try {
               outBoxObj.simpleOutBox(feeContract.toAddress, devFeeAmount)
             } catch {
               case e: Exception =>
-                return Left("cannot build hodlERG dev fee outbox")
+                return Left("[hodlErg] hodlErg burn cannot build dev fee box")
             }
 
           val unsignedTransaction =
             try {
-              // for debugging for box with custom ergotree
-//              val boxAPIObj = new BoxAPI("https://tn-ergo-explorer.anetabtc.io", "http://168.138.185.215:9052")
-//              val bank = "3rJkun8FwRnCZdsyYuDTgw5fioFjtCFS59LEK5iTWLmGvqMYdyvEQz2PY7WXA5hSFCcacD36B5t333XAp8FyXNcvSq3UVVujAR5Xbi7Gc9rYZd1TBFEjeWk3Qet719HSVkp3PGGJozzwNhXjBYgTcy5PK2ZAFx4xpsd5GuatacbMKg2R5TkZWiZAxrpuZPkQn1y3UFZr5KeidjFgSa6jWUC82NKUGfZpmPHmE1q4w4Wdj8eoQYwNPQ1DYbykqmeL5znfoQTTtXX8vAdamRU6uNZBMMYzH3NZJWkmPAk8D69RATj5Gh8TUzV4NLBc8QoQwX1QWRtXXYEAXWaKk4PqAu9zJn2cVuATBT72RhvzDUGHw3MAnSbgjA277iZFJkyiroAaXYBWyi84d9nH2LgG8WBgSvzMDom3DwoRgLSEeKyXeS5ewdRrms1rL7rTGYoQ15nRUW1eHB2AWEgEREmw5rSEfCY9CoYAAAVmsDxB9CbkJEbR6dwCL3GoWzuuUEWuLaRbrpUSBCAx5LAcFD7DDgrg56TjRYuQE"
-//              val boxes = boxAPIObj
-//                .getUnspentBoxesFromApi(bank, selectAll = true)
-//                .items
-//
-//              val myBank = boxes.find(_.boxId == "a72b7c4b159cd6079e6f231cea887b3fabf6855042bb8b8c2f42b35a00abfdce").getOrElse(boxes.head)
-//
-////              myBank.ergoTree = "100b0402040004020101040004000502050005d00f04040e2084606649e202b0be47cddf744ce5c24cbd087e287f7fc4acae77ad2e92440017d812d601db6308a7d602b27201730000d6038c720202d604b2a5730100d605db63087204d606b27205730200d6078c720602d6089972037207d609c17204d60a7ec1a706d60be4c6a70505d60c7e720b06d60de4c6a70405d60e9d9c720a720c7e99720d720306d60fe4c6a70605d610e4c6a70705d611e4c6a70805d61296830401927209720f73039683030193b27205730400b27201730500938c7206018c72020192720773069683050193e4c672040405720d93e4c672040505720b93e4c672040605720f93e4c672040705721093e4c6720408057211959172087307d1968302017212927e7209069a720a9d9c7e720806720e720cd803d6139d9c7e997207720306720e720cd6147308d615b2a5730900d1968303017212937e7209069a99720a72139d9c72137e7211067e72140696830201937ec17215069d9c72137e7210067e72140693cbc27215730a"
-
-//              val box = boxAPIObj.convertJsonBoxToInputBox(myBank)
-
               txHelper.buildUnsignedTransaction(
                 inputs = Array(currentBankInput, proxyInput),
                 outputs = Array(hodlOutBox, recipientBox, devFeeBox),
@@ -366,7 +356,7 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("cannot build hodlERG burn tx: " + e.getMessage)
+                return Left("[hodlErg] cannot build hodlERG burn tx: " + e.getMessage)
             }
 
 //          println(txHelper.getUnsignedJson(unsignedTransaction)) // for debugging
@@ -378,7 +368,7 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("error signing hodlERG burn tx: " + e.getMessage)
+                return Left("[hodlErg] error signing hodlERG burn tx: " + e.getMessage)
             }
 
           val txHash =
@@ -388,10 +378,382 @@ class TxBuildUtility(
               case e: DoubleSpendingError  => return Left(e.getMessage)
               case e: TransactionInMempool => return Left(e.getMessage)
               case e: Exception =>
-                return Left("error submitting hodlMint tx: " + e.getMessage)
+                return Left("[hodlErg] error submitting hodlMint tx: " + e.getMessage)
             }
 
-          println("Burn Transaction Submitted: " + txHash)
+          println("[hodlErg] Burn Transaction Submitted: " + txHash)
+          Thread.sleep(500)
+          Option(signedTx.getOutputsToSpend.get(0))
+        }
+      case Left(errorMessage) => Left(errorMessage)
+    }
+  }
+
+  def processHodlTokenMint(
+      proxyInput: InputBox,
+      currentBankInput: InputBox
+  ): Either[String, Option[InputBox]] = {
+    extractInputData(proxyInput, currentBankInput, ctx.getNetworkType) match {
+      case Right(res: ExtractionResult) =>
+        val result = for {
+          recipientAddress <- res.recipientAddress.toRight(
+            "[hodlToken] Recipient address not found"
+          )
+          hodlSingleton <- res.hodlSingleton.toRight("[hodlToken] singleton not found")
+          hodlTokenId <- res.hodlTokenId.toRight("[hodlToken] hodl token not found")
+          totalTokenSupply <- res.totalTokenSupply.toRight(
+            "[hodlToken] total token supply not found"
+          )
+          precisionFactor <- res.precisionFactor.toRight("[hodlToken] precision not found")
+          minBankValue <- res.minBankValue.toRight("[hodlToken] min bank value not found")
+          devFee <- res.devFee.toRight("[hodlToken] dev fee not found")
+          bankFee <- res.bankFee.toRight("[hodlToken] bank fee not found")
+          minBoxValue <- res.minBoxValue.toRight("[hodlToken] min box value not found")
+          minerFee <- res.minerFee.toRight("[hodlToken] miner fee not found")
+          txOperatorFee <- res.txOperatorFee.toRight(
+            "[hodlToken] tx operator fee not found"
+          )
+        } yield {
+
+          val baseTokenId =
+            try {
+              currentBankInput.getTokens.get(2).getId
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] base token id could not be extracted")
+            }
+
+          val incomingBaseTokenAmount =
+            try {
+              val baseToken = proxyInput.getTokens.get(0)
+              if (baseToken.getId.toString() != baseTokenId.toString()) {
+                throw new Exception(
+                  "[hodlToken] base token does not match bank's base token"
+                )
+              }
+              baseToken.getValue
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] base token could not be extracted from proxy")
+            }
+
+          val tokenMintAmount =
+            try {
+              hodlTokenMintAmount(
+                currentBankInput,
+                incomingBaseTokenAmount
+              )
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] hodlMintAmount could not be calculated")
+            }
+
+          val phoenixContract =
+            try {
+              Address
+                .fromPropositionBytes(
+                  ctx.getNetworkType,
+                  currentBankInput.toErgoValue.getValue.propositionBytes.toArray
+                )
+                .toErgoContract
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error getting phoenix contract")
+            }
+
+          val hodlOutBox =
+            try {
+              outBoxObj.hodlBankBox(
+                phoenixContract,
+                hodlSingleton,
+                new ErgoToken(
+                  hodlTokenId,
+                  currentBankInput.getTokens
+                    .get(1)
+                    .getValue - (tokenMintAmount.toLong)
+                ),
+                totalTokenSupply,
+                precisionFactor,
+                minBankValue,
+                bankFee,
+                devFee,
+                currentBankInput.getValue,
+                Some(
+                  ErgoToken(
+                    baseTokenId,
+                    currentBankInput.getTokens
+                      .get(2)
+                      .getValue + incomingBaseTokenAmount
+                  )
+                )
+              )
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error building hodlOutBox for mint")
+            }
+
+          val recipientBox =
+            try {
+              outBoxObj.hodlMintBox(
+                recipientAddress,
+                new ErgoToken(hodlTokenId, tokenMintAmount.toLong)
+              )
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error building recipient box for mint")
+            }
+
+          val unsignedTransaction =
+            try {
+              txHelper.buildUnsignedTransaction(
+                inputs = Array(currentBankInput, proxyInput),
+                outputs = Array(hodlOutBox, recipientBox),
+                fee = minerFee
+              )
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error building mint tx")
+            }
+//          println(txHelper.getUnsignedJson(unsignedTransaction))
+
+          val signedTx =
+            try {
+              txHelper.signTransaction(
+                unsignedTransaction
+              )
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error signing mint tx " + e)
+            }
+
+          val txHash =
+            try {
+              txHelper.sendTx(signedTx)
+            } catch {
+              case e: DoubleSpendingError  => return Left(e.getMessage)
+              case e: TransactionInMempool => return Left(e.getMessage)
+              case e: Exception =>
+                return Left(
+                  "[hodlToken] error submitting hodlToken mint tx: " + e.getMessage
+                )
+            }
+
+          println("[hodlToken] mint Transaction Submitted: " + txHash)
+          Thread.sleep(500)
+
+          signedTx.getOutputsToSpend.get(0)
+        }
+        result.fold[Either[String, Option[InputBox]]](
+          e => Left(e),
+          s => Right(Some(s))
+        )
+
+      case Left(errorMessage) => Left(errorMessage)
+    }
+  }
+
+  def processHodlTokenBurn(
+      proxyInput: InputBox,
+      currentBankInput: InputBox
+  ): Either[String, Option[InputBox]] = {
+    extractInputData(proxyInput, currentBankInput, ctx.getNetworkType) match {
+      case Right(res: ExtractionResult) =>
+        for {
+          recipientAddress <- res.recipientAddress.toRight(
+            "[hodlToken] recipient address not found"
+          )
+          hodlSingleton <- res.hodlSingleton.toRight("[hodlToken] hodl singleton not found")
+          hodlTokenId <- res.hodlTokenId.toRight("[hodlToken] hodl token id not found")
+          totalTokenSupply <- res.totalTokenSupply.toRight(
+            "[hodlToken] total token supply not found"
+          )
+          precisionFactor <- res.precisionFactor.toRight(
+            "[hodlToken] precision factor not found"
+          )
+          minBankValue <- res.minBankValue.toRight(
+            "[hodlToken] minimum bank value not found"
+          )
+          devFee <- res.devFee.toRight("[hodlToken] developer fee not found")
+          bankFee <- res.bankFee.toRight("[hodlToken] bank fee not found")
+          minBoxValue <- res.minBoxValue.toRight("[hodlToken] minimum box value not found")
+          minerFee <- res.minerFee.toRight("[hodlToken] miner fee not found")
+          txOperatorFee <- res.txOperatorFee.toRight(
+            "[hodlToken] transaction operator fee not found"
+          )
+        } yield {
+
+          val baseTokenId =
+            try {
+              currentBankInput.getTokens.get(2).getId
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] base token id could not be extracted")
+            }
+
+          val hodlDummyToken =
+            try {
+              new ErgoToken(hodlTokenId, 1L)
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error building dummy token")
+            }
+
+          val hodlBurnAmount =
+            try {
+              proxyInput.getTokens.asScala
+                .filter(t =>
+                  t.getId.toString == hodlDummyToken.getId.toString()
+                )
+                .map(_.getValue)
+                .sum
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error finding dummy token")
+            }
+
+          val (userBoxAmount, devFeeAmount, bankFeeAmount) =
+            try {
+              burnTokenAmount(currentBankInput, hodlBurnAmount)
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error calculating burn amount")
+            }
+
+          val hodlOutBoxHodlTokenAmount =
+            try {
+              currentBankInput.getTokens.get(1).getValue + hodlBurnAmount
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error getting bank tokens")
+            }
+
+          val phoenixContract =
+            try {
+              Address
+                .fromPropositionBytes(
+                  ctx.getNetworkType,
+                  currentBankInput.toErgoValue.getValue.propositionBytes.toArray
+                )
+                .toErgoContract
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error getting phoenix contract")
+            }
+
+          val hodlOutBox =
+            try {
+              outBoxObj.hodlBankBox(
+                phoenixContract,
+                hodlSingleton,
+                new ErgoToken(hodlTokenId, hodlOutBoxHodlTokenAmount),
+                totalTokenSupply,
+                precisionFactor,
+                minBankValue,
+                bankFee,
+                devFee,
+                currentBankInput.getValue,
+                Some(
+                  ErgoToken(
+                    baseTokenId,
+                    currentBankInput.getTokens
+                      .get(2)
+                      .getValue - userBoxAmount - devFeeAmount
+                  )
+                )
+              )
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error building hodlOutBox for burn")
+            }
+
+          val recipientBox =
+            try {
+              outBoxObj.hodlBurnBox(
+                recipientAddress,
+                ErgoToken(baseTokenId, userBoxAmount)
+              )
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error building recipient box for burn")
+            }
+
+          val feeScript: String = {
+            if (ctx.getNetworkType == NetworkType.MAINNET) {
+              PhoenixContracts.phoenix_v1_hodltoken_fee.contractScript
+            } else {
+              PhoenixContracts.phoenix_v1_hodltoken_feeTest_testnet.contractScript
+            }
+          }
+
+          val feeContract: ErgoContract = compiler.compileFeeTokenContract(
+            feeScript,
+            minMinerFee,
+            currentBankInput.getTokens.get(2),
+            25L,
+            25L,
+            25L
+          )
+
+          val devFeeBox =
+            try {
+              outBoxObj.tokenOutBox(
+                Array(
+                  ErgoToken(
+                    currentBankInput.getTokens.get(2).getId,
+                    devFeeAmount
+                  )
+                ),
+                feeContract.toAddress
+              )
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] cannot build dev fee box")
+            }
+
+          val unsignedTransaction =
+            try {
+              txHelper.buildUnsignedTransaction(
+                inputs = Array(currentBankInput, proxyInput),
+                outputs =
+                  if (userBoxAmount > 0 && devFeeAmount > 0)
+                    Array(hodlOutBox, recipientBox, devFeeBox)
+                  else if (userBoxAmount > 0 && devFeeAmount == 0)
+                    Array(hodlOutBox, recipientBox)
+                  else Array(hodlOutBox),
+                fee = minerFee
+              )
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] cannot build hodlToken burn tx: " + e.getMessage)
+            }
+
+//          println(
+//            txHelper.getUnsignedJson(unsignedTransaction)
+//          ) // for debugging
+
+          val signedTx =
+            try {
+              txHelper.signTransaction(
+                unsignedTransaction
+              )
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error signing burn tx: " + e)
+            }
+
+          val txHash =
+            try {
+              txHelper.sendTx(signedTx)
+            } catch {
+              case e: DoubleSpendingError  => return Left(e.getMessage)
+              case e: TransactionInMempool => return Left(e.getMessage)
+              case e: Exception =>
+                return Left(
+                  "[hodlToken] error submitting burn tx: " + e.getMessage
+                )
+            }
+
+          println("[hodlToken] Burn Transaction Submitted: " + txHash)
           Thread.sleep(500)
           Option(signedTx.getOutputsToSpend.get(0))
         }
