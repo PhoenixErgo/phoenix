@@ -106,9 +106,11 @@ trait PhoenixCommon extends HttpClientTesting {
   val devFee = 3L
 
   def extractPrecisionFactor(hodlBoxIn: InputBox): Long = {
-    val precisionFactor =
-      hodlBoxIn.getRegisters.get(1).getValue.asInstanceOf[Long] // R5
-    precisionFactor
+    hodlBoxIn.getRegisters.get(1).getValue.asInstanceOf[Long] // R5
+  }
+
+  def extractBaseTokenSupply(hodlBoxIn: InputBox): Long = {
+    hodlBoxIn.getRegisters.get(0).getValue.asInstanceOf[Long] // R4
   }
 
   def hodlPrice(hodlBoxIn: InputBox): Long = {
@@ -198,32 +200,42 @@ trait PhoenixCommon extends HttpClientTesting {
 
     val bankFeeNum =
       hodlBoxIn.getRegisters.get(4).getValue.asInstanceOf[Long] // R8
-    val devFeeNum = hodlBoxIn.getRegisters.get(3).getValue.asInstanceOf[Long] // R7
+    val devFeeNum =
+      hodlBoxIn.getRegisters.get(3).getValue.asInstanceOf[Long] // R7
 
     val price = hodlTokenPrice(hodlBoxIn)
     val precisionFactor = extractPrecisionFactor(hodlBoxIn)
 
-
     val expectedAmountBeforeFees = hodlBurnAmt * price / precisionFactor
 
-    val dividend_1: BigInt = (BigInt(expectedAmountBeforeFees) * (BigInt(bankFeeNum) + BigInt(devFeeNum)))
-    val divisor_1: BigInt =  BigInt(feeDenom) // This is never zero.
+    val dividend_1: BigInt = (BigInt(expectedAmountBeforeFees) * (BigInt(
+      bankFeeNum
+    ) + BigInt(devFeeNum)))
+    val divisor_1: BigInt = BigInt(feeDenom) // This is never zero.
 
     val bankFeeAndDevFeeAmount: BigInt = divUp((dividend_1, divisor_1)) // Y
 
     val dividend_2: BigInt = (bankFeeAndDevFeeAmount * BigInt(devFeeNum))
-    val divisor_2: BigInt = (BigInt(bankFeeNum) + BigInt(devFeeNum)) // This is never zero, devFeeNum can be zero but bankFeeNum cannot.
+    val divisor_2: BigInt =
+      (BigInt(bankFeeNum) + BigInt(
+        devFeeNum
+      )) // This is never zero, devFeeNum can be zero but bankFeeNum cannot.
 
     val devFeeAmount: BigInt = divUp((dividend_2, divisor_2)) // Z
     val bankFeeAmount: BigInt = bankFeeAndDevFeeAmount - devFeeAmount // Y - Z
 
-
-    val devFeeAmountAdjusted: BigInt = if (bankFeeAmount == BigInt(0)) BigInt(0) else devFeeAmount
-    val bankFeeAmountAdjusted: BigInt = if (bankFeeAmount == BigInt(0)) devFeeAmount else bankFeeAmount
+    val devFeeAmountAdjusted: BigInt =
+      if (bankFeeAmount == BigInt(0)) BigInt(0) else devFeeAmount
+    val bankFeeAmountAdjusted: BigInt =
+      if (bankFeeAmount == BigInt(0)) devFeeAmount else bankFeeAmount
 
     val expectedAmountWithdrawn: BigInt =
       expectedAmountBeforeFees - bankFeeAmountAdjusted - devFeeAmountAdjusted
-    (expectedAmountWithdrawn.toLong, devFeeAmountAdjusted.toLong, bankFeeAmountAdjusted.toLong)
+    (
+      expectedAmountWithdrawn.toLong,
+      devFeeAmountAdjusted.toLong,
+      bankFeeAmountAdjusted.toLong
+    )
   }
 
   def hodlTokenPrice(hodlBoxIn: InputBox): Long = {
@@ -234,7 +246,12 @@ trait PhoenixCommon extends HttpClientTesting {
     val hodlCoinsIn: Long = hodlBoxIn.getTokens.get(1).getValue
     val hodlCoinsCircIn: Long = totalTokenSupply - hodlCoinsIn
     val precisionFactor = extractPrecisionFactor(hodlBoxIn)
-    ((BigInt(reserveIn) * BigInt(precisionFactor)) / BigInt(
+    val num = (BigInt(reserveIn) * BigInt(precisionFactor))
+    assert(
+      num >= hodlCoinsCircIn,
+      "baseToken supply must be greater than or equal to hodlTokens in circulation"
+    )
+    (num / BigInt(
       hodlCoinsCircIn
     )).toLong
   }
