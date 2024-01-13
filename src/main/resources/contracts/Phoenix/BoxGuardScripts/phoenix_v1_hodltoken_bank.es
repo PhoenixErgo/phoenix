@@ -30,6 +30,10 @@
     // Outputs: Bank, BuyerPK, PhoenixFee, MinerFee, TxOperatorFee
     // Context Variables: None
     // 3. Reserve Deposit Tx
+    // Inputs: Bank, Proxy
+    // Data Input: None
+    // Outputs: Bank, MinerFee, TxOperatorFee
+    // Context Variables: None
 
     // ===== Compile Time Constants ($) ===== //
     // $phoenixFeeContractBytesHash: Coll[Byte]
@@ -73,9 +77,11 @@
     val hodlTokensOut: Long  = bankBoxOUT.tokens(1)._2
 
     // Bank Info
-    val hodlTokensCircDelta: Long   = hodlTokensIn - hodlTokensOut // When minting hodlToken, this is the amount of coins the buyer gets.
+    val hodlTokensCircDelta: Long   = hodlTokensIn - hodlTokensOut                                  // When minting hodlToken, this is the amount of coins the buyer gets.
     val price: BigInt               = (reserveIn.toBigInt * precisionFactor) / hodlTokensCircIn
-    val isMintTx: Boolean           = (hodlTokensCircDelta > 0L)
+    val isMintTx: Boolean           = (hodlTokensCircDelta > 0L)                                    // hodlToken supply increases + baseToken reserve increases
+    val isBurnTx: Boolean           = (hodlTokensCircDelta < 0L)                                    // hodlToken supply decreases + baseToken reserve decreases
+    val isDepositTx: Boolean        = (hodlTokensCircDelta == 0L)                                   // baseToken reserve increases
 
     val validBankRecreation: Boolean = {
 
@@ -140,36 +146,36 @@
 
         sigmaProp(validMintTx)
 
-    } else {
+    } else if (isBurnTx) {
 
         // ===== Burn Tx ===== //
         val validBurnTx: Boolean = {
 
             val hodlTokensBurned: Long = hodlTokensOut - hodlTokensIn
+            val expectedAmountBeforeFees: Long = (hodlTokensBurned * price) / precisionFactor // X: Here we convert the amount of hodlTokens burned into the amount of base tokens released from the bank.
 
-            val expectedAmountBeforeFees: Long = (hodlTokensBurned * price) / precisionFactor // X
-
-            val dividend_1: BigInt = (expectedAmountBeforeFees.toBigInt * (bankFeeNum.toBigInt + devFeeNum.toBigInt))
+            val dividend_1: BigInt = (expectedAmountBeforeFees.toBigInt * (bankFeeNum.toBigInt + devFeeNum.toBigInt)) // Here we want to determine the amount allocated to the bank and to the developers.
             val divisor_1: BigInt = feeDenom // This is never zero.
 
-            val bankFeeAndDevFeeAmount: BigInt = divUp((dividend_1, divisor_1)) // Y
+            val bankFeeAndDevFeeAmount: BigInt = divUp((dividend_1, divisor_1)) // Y: Here we use the divUp method to perform integer division in order to compute the combined bank fee and developer fee without integer division errors.
 
-            val dividend_2: BigInt = (bankFeeAndDevFeeAmount.toBigInt * devFeeNum.toBigInt)
+            val dividend_2: BigInt = (bankFeeAndDevFeeAmount.toBigInt * devFeeNum.toBigInt) // Here we want to determine the allocation of the developers from the total bank fee and developer fee.
             val divisor_2: BigInt = (bankFeeNum.toBigInt + devFeeNum.toBigInt) // This is never zero, devFeeNum can be zero but bankFeeNum cannot.
 
-            val devFeeAmount: BigInt = divUp((dividend_2, divisor_2)) // Z
-            val bankFeeAmount: BigInt = bankFeeAndDevFeeAmount - devFeeAmount // Y - Z
+            val devFeeAmount: BigInt = divUp((dividend_2, divisor_2)) // Z: Here we use the divUp method to perform integer division in order to compute the developer fee allocation without integer division errors.
+            val bankFeeAmount: BigInt = bankFeeAndDevFeeAmount - devFeeAmount // Y - Z: Using the the combined bank fee and developer fee and the isolated developer fee, we compute the remaining amount which is the bank fee allocation.
 
+            // Here we adjust the developer fee and bank fee amounts so that the bank fee is never 0, we do this to preserve the game mechanics of the protocol, i.e. that the price always increases.
             val devFeeAmountAdjusted: BigInt = if (bankFeeAmount == 0.toBigInt) 0.toBigInt else devFeeAmount
             val bankFeeAmountAdjusted: BigInt = if (bankFeeAmount == 0.toBigInt) devFeeAmount else bankFeeAmount
 
-            val expectedUserAmount: BigInt = expectedAmountBeforeFees - bankFeeAndDevFeeAmount // X - Y, The buyer never gets the bankFeeAmount since it remains in the bank box.
+            val expectedUserAmount: BigInt = expectedAmountBeforeFees - bankFeeAndDevFeeAmount // X - Y: The buyer never gets the bankFeeAmount since it remains in the bank box.
 
             val validBankWithdraw: Boolean = (reserveOut.toBigInt == reserveIn.toBigInt - expectedAmountBeforeFees + bankFeeAmountAdjusted)
 
             val validPhoenixFee: Boolean = {
 
-                if (devFeeAmountAdjusted != 0) {
+                if (devFeeAmountAdjusted != 0.toBigInt) {
 
                     val phoenixFeeBoxOUT: Box = OUTPUTS(2)
 
@@ -194,6 +200,25 @@
         }
 
         sigmaProp(validBurnTx)
+
+    } else if (isDepositTx) {
+
+        // ===== Reseve Deposit Tx ===== //
+        val validReserveDepositTx: Boolean = {
+
+           val validReserveIncrease: Boolean = (reserveOut > reserveIn) // The bank baseToken reserve must increase, nothing else happens.
+
+           allOf(Coll(
+            validBankRecreation,
+            validReserveIncrease
+           ))
+
+        }
+
+        sigmaProp(validReserveDepositTx)
+
+    } else {
+        sigmaProp(false)
     }
 
 }
