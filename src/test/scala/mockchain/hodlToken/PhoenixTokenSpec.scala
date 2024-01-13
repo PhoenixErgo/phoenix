@@ -2,7 +2,8 @@ package mockchain.token
 
 import mockClient.Common
 import mockchain.PhoenixCommon
-import org.ergoplatform.appkit.{Address, OutBox, Parameters}
+import org.ergoplatform.appkit.impl.ErgoTreeContract
+import org.ergoplatform.appkit.{Address, Parameters}
 import org.ergoplatform.sdk.ErgoToken
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -31,6 +32,7 @@ class PhoenixTokenSpec
 
     val hodlTokenMintAmount = 20
 
+    // note the max hodlToken in bank must be one less than baseTokenTotalSupply
     val hodlTokens = new ErgoToken(hodlTokenId, baseTokenTotalSupply - 1L)
     val baseTokens = new ErgoToken(baseTokenId, startingTVLAmount)
 
@@ -49,8 +51,12 @@ class PhoenixTokenSpec
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
-    val price = hodlTokenPrice(hodlBox)
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
 
+    val price = hodlTokenPrice(hodlBox)
 
     require(
       hodlBox.getTokens
@@ -124,9 +130,12 @@ class PhoenixTokenSpec
 
     val hodlTokenMintAmount = 1 // can be any amount
 
-    val hodlTokens = new ErgoToken(hodlTokenId, baseTokenTotalSupply - 2000000L) // note same value is subtracted as token amount below
+    val hodlTokens =
+      new ErgoToken(
+        hodlTokenId,
+        baseTokenTotalSupply - 2000000L
+      ) // note same value is subtracted as token amount below
     val baseTokens = new ErgoToken(baseTokenId, 2000000L)
-
 
     val precisionFactor = 1L // should be one for tokens with no decimals
 
@@ -145,7 +154,14 @@ class PhoenixTokenSpec
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
+
     val price = hodlTokenPrice(hodlBox)
+
+    assert(price == 1, "price must be 1")
 
     require(
       hodlBox.getTokens
@@ -217,6 +233,8 @@ class PhoenixTokenSpec
 
   "PhoenixTokenMintOperation" should "work with multiple recipients" in {
 
+    // same as first test but with one additional recipient
+
     val hodlTokenMintAmount = 20
 
     val hodlTokens = new ErgoToken(hodlTokenId, baseTokenTotalSupply - 1L)
@@ -236,6 +254,11 @@ class PhoenixTokenSpec
         Some(baseTokens)
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
 
     val price = hodlTokenPrice(hodlBox)
 
@@ -259,7 +282,7 @@ class PhoenixTokenSpec
     val fundingBox = outBoxObj
       .genericContractBox(
         compiler.compileDummyContract(),
-        tokenFundingBoxValue + 1000000L,
+        tokenFundingBoxValue + 1000000L, // extra ERG required for additional box made
         Seq(
           ErgoToken(hodlBox.getTokens.get(2).getId, amountBaseTokenRequired)
         )
@@ -289,19 +312,31 @@ class PhoenixTokenSpec
 
     val recipientBox = outBoxObj.hodlMintBox(
       userAddress,
-      new ErgoToken(hodlTokenId, 10),
+      new ErgoToken(
+        hodlTokenId,
+        10
+      ), // manually specified how much hodlToken to receive
       minAmount
     )
 
     val recipientBox2 = outBoxObj.hodlMintBox(
-      Address.create("9ehbiMqN88ctdANajxz8UB2G2MHYcBgbrTFEbgCFKPWrmNnSfjR"),
-      new ErgoToken(hodlTokenId, 10),
+      Address.create(
+        "9ehbiMqN88ctdANajxz8UB2G2MHYcBgbrTFEbgCFKPWrmNnSfjR"
+      ), // random address
+      new ErgoToken(
+        hodlTokenId,
+        10
+      ), // manually specified how much hodlToken to receive
       minAmount
     )
 
     val unsignedTransaction = txHelper.buildUnsignedTransaction(
       inputs = Array(hodlBox, fundingBox),
-      outputs = Array(hodlOutBox, recipientBox, recipientBox2)
+      outputs = Array(
+        hodlOutBox,
+        recipientBox,
+        recipientBox2
+      ) // extra box added to outputs
     )
 
     noException shouldBe thrownBy {
@@ -332,6 +367,11 @@ class PhoenixTokenSpec
         Some(baseTokens)
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
 
     val price = hodlTokenPrice(hodlBox)
 
@@ -369,7 +409,7 @@ class PhoenixTokenSpec
         hodlTokenId,
         hodlBox.getTokens
           .get(1)
-          .getValue - hodlTokenMintAmount - 1 // <<-- this line has changed
+          .getValue - hodlTokenMintAmount - 1 // <<-- this line has changed, extra token taken
       ),
       baseTokenTotalSupply,
       precisionFactor,
@@ -390,7 +430,7 @@ class PhoenixTokenSpec
       new ErgoToken(
         hodlTokenId,
         hodlTokenMintAmount + 1
-      ), // <<-- this line has changed
+      ), // <<-- this line has changed, extra token given
       minAmount
     )
 
@@ -428,6 +468,11 @@ class PhoenixTokenSpec
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
+
     val price = hodlTokenPrice(hodlBox)
 
     require(
@@ -464,7 +509,7 @@ class PhoenixTokenSpec
         hodlTokenId,
         hodlBox.getTokens
           .get(1)
-          .getValue - (hodlTokenMintAmount + 1) // <<-- this line has changed
+          .getValue - (hodlTokenMintAmount + 1) // <<-- this line has changed, extra hodlToken added
       ),
       baseTokenTotalSupply,
       precisionFactor,
@@ -486,7 +531,7 @@ class PhoenixTokenSpec
       userAddress,
       new ErgoToken(
         hodlTokenId,
-        (hodlTokenMintAmount - 1) // <<-- this line has changed
+        (hodlTokenMintAmount - 1) // <<-- this line has changed, hodlToken removed
       ),
       minAmount
     )
@@ -527,6 +572,11 @@ class PhoenixTokenSpec
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
 
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
+
     val price = hodlTokenPrice(hodlBox)
 
     require(
@@ -551,7 +601,7 @@ class PhoenixTokenSpec
         compiler.compileDummyContract(),
         tokenFundingBoxValue,
         Seq(
-          new ErgoToken(hodlBox.getTokens.get(2).getId, amountBaseTokenRequired)
+          ErgoToken(hodlBox.getTokens.get(2).getId, amountBaseTokenRequired)
         )
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
@@ -595,13 +645,16 @@ class PhoenixTokenSpec
 
   "PhoenixTokenBurnOperation" should "succeed when one unit of token is burned" in {
 
-    val hodlTokenAmount = 40000000 * 1000000000L
-
     val hodlTokenBurnAmount = 1
 
     val hodlTokens =
-      new ErgoToken(hodlTokenId, hodlTokenAmount)
-    val baseTokens = new ErgoToken(baseTokenId, startingTVLAmount)
+      new ErgoToken(
+        hodlTokenId,
+        baseTokenTotalSupply - 2000000L
+      ) // note same value is subtracted as token amount below
+    val baseTokens = new ErgoToken(baseTokenId, 2000000L)
+
+    // above values of hodlToken and baseTokens allows for price to be 1:1
 
     val hodlBox = outBoxObj
       .hodlBankBox(
@@ -617,6 +670,11 @@ class PhoenixTokenSpec
         Some(baseTokens)
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
 
     val (userBoxAmount, devFeeAmount, bankFeeAmount) =
       burnTokenAmount(hodlBox, hodlTokenBurnAmount)
@@ -670,12 +728,18 @@ class PhoenixTokenSpec
           Array(hodlOutBox, recipientBox)
         else Array(hodlOutBox)
     )
-
-//    require(
-//      hodlOutBox.getTokens
-//        .get(2)
-//        .getValue == hodlBox.getTokens.get(2).getValue - 1940
-//    )
+    assert(
+      userBoxAmount == 0L,
+      "user should not receive token when only one unit is burned"
+    )
+    assert(
+      devFeeAmount == 0L,
+      "dev should not receive token when only one unit is burned"
+    )
+    assert(
+      bankFeeAmount == 1L,
+      "bank must receive token when only one unit is burned"
+    )
 
     noException shouldBe thrownBy {
       txHelper.signTransaction(
@@ -687,21 +751,23 @@ class PhoenixTokenSpec
 
   "PhoenixTokenBurnOperation" should "succeed with two units of tokens" in {
 
-    val hodlTokenAmount = 40000000 * 1000000000L
-    val startingTVLAmount: Long = 10000000 * 1000000000L
-
     val hodlTokenBurnAmount = 2
 
     val hodlTokens =
-      new ErgoToken(hodlTokenId, hodlTokenAmount)
-    val baseTokens = new ErgoToken(baseTokenId, startingTVLAmount)
+      new ErgoToken(
+        hodlTokenId,
+        baseTokenTotalSupply - 2000000L
+      ) // note same value is subtracted as token amount below
+    val baseTokens = new ErgoToken(baseTokenId, 2000000L)
+
+    // above values of hodlToken and baseTokens allows for price to be 1:1
 
     val hodlBox = outBoxObj
       .hodlBankBox(
         phoenixTokenContract,
         hodlBankSingleton,
         hodlTokens,
-        totalSupply,
+        baseTokenTotalSupply,
         precisionFactor,
         minBankValue,
         bankFee,
@@ -710,6 +776,11 @@ class PhoenixTokenSpec
         Some(baseTokens)
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
 
     val (userBoxAmount, devFeeAmount, bankFeeAmount) =
       burnTokenAmount(hodlBox, hodlTokenBurnAmount)
@@ -729,7 +800,7 @@ class PhoenixTokenSpec
         hodlTokenId,
         hodlBox.getTokens.get(1).getValue + fundingBox.getTokens.get(0).getValue
       ),
-      totalSupply,
+      baseTokenTotalSupply,
       precisionFactor,
       minBankValue,
       bankFee,
@@ -761,11 +832,18 @@ class PhoenixTokenSpec
         else Array(hodlOutBox, recipientBox)
     )
 
-    //    require(
-    //      hodlOutBox.getTokens
-    //        .get(2)
-    //        .getValue == hodlBox.getTokens.get(2).getValue - 1940
-    //    )
+    assert(
+      userBoxAmount == 1L,
+      "user must receive tokens when two units are burned"
+    )
+    assert(
+      devFeeAmount == 0L,
+      "dev should not receive tokens when two units are burned"
+    )
+    assert(
+      bankFeeAmount == 1L,
+      "bank must receive tokens when two units are burned"
+    )
 
     noException shouldBe thrownBy {
       txHelper.signTransaction(
@@ -791,15 +869,20 @@ class PhoenixTokenSpec
         phoenixTokenContract,
         hodlBankSingleton,
         hodlTokens,
-        totalSupply - 1, // <-- this line is changed
-        precisionFactor + 10, // <-- this line is changed
-        minBankValue + 2, // <-- this line is changed
-        bankFee - 1, // <-- this line is changed
-        devFee + 5, // <-- this line is changed
+        totalSupply,
+        precisionFactor,
+        minBankValue,
+        bankFee,
+        devFee,
         bankERGAmount,
         Some(baseTokens)
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
 
     val (userBoxAmount, devFeeAmount, bankFeeAmount) =
       burnTokenAmount(hodlBox, hodlTokenBurnAmount)
@@ -819,11 +902,11 @@ class PhoenixTokenSpec
         hodlTokenId,
         hodlBox.getTokens.get(1).getValue + fundingBox.getTokens.get(0).getValue
       ),
-      totalSupply,
-      precisionFactor,
-      minBankValue,
-      bankFee,
-      devFee,
+      totalSupply - 1, // <-- this line is changed
+      precisionFactor + 10, // <-- this line is changed
+      minBankValue + 2, // <-- this line is changed
+      bankFee - 1, // <-- this line is changed
+      devFee + 5, // <-- this line is changed
       bankERGAmount,
       Some(
         ErgoToken(
@@ -849,12 +932,18 @@ class PhoenixTokenSpec
       outputs = Array(hodlOutBox, recipientBox, devFeeBox)
     )
 
-//    require(
-//      hodlOutBox.getTokens
-//        .get(2)
-//        .getValue == hodlBox.getTokens.get(2).getValue - 1940
-//    )
-//    commented out because burn information is extracted from registers, if they change so do burn values
+    assert(
+      userBoxAmount == 1934L,
+      "must correspond to manually calculated values"
+    )
+    assert(
+      devFeeAmount == 6L,
+      "must correspond to manually calculated values"
+    )
+    assert(
+      bankFeeAmount == 60L,
+      "must correspond to manually calculated values"
+    )
 
     the[Exception] thrownBy {
       txHelper.signTransaction(unsignedTransaction)
@@ -864,8 +953,10 @@ class PhoenixTokenSpec
 
   "PhoenixTokenBurnOperation" should "fail when user's box takes more tokens than allowed" in {
 
-    val hodlTokenAmount = 40000000 * 1000000000L
-    val startingTVLAmount: Long = 10000000 * 1000000000L
+    val hodlTokenAmount = 97537237623541120L
+    val startingTVLAmount: Long = 406609260219332L
+    val baseTokenTotalSupply = 97739924000000000L
+    // different values used to make price = 2
 
     val hodlTokenBurnAmount = 2000
 
@@ -878,7 +969,7 @@ class PhoenixTokenSpec
         phoenixTokenContract,
         hodlBankSingleton,
         hodlTokens,
-        totalSupply,
+        baseTokenTotalSupply,
         precisionFactor,
         minBankValue,
         bankFee,
@@ -887,6 +978,11 @@ class PhoenixTokenSpec
         Some(baseTokens)
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
 
     val (userBoxAmount, devFeeAmount, bankFeeAmount) =
       burnTokenAmount(hodlBox, hodlTokenBurnAmount)
@@ -906,7 +1002,7 @@ class PhoenixTokenSpec
         hodlTokenId,
         hodlBox.getTokens.get(1).getValue + fundingBox.getTokens.get(0).getValue
       ),
-      totalSupply,
+      baseTokenTotalSupply,
       precisionFactor,
       minBankValue,
       bankFee,
@@ -943,6 +1039,19 @@ class PhoenixTokenSpec
       outputs = Array(hodlOutBox, recipientBox, devFeeBox)
     )
 
+    assert(
+      userBoxAmount == 3868L,
+      "must correspond to manually calculated values"
+    )
+    assert(
+      devFeeAmount == 12L,
+      "must correspond to manually calculated values"
+    )
+    assert(
+      bankFeeAmount == 120L,
+      "must correspond to manually calculated values"
+    )
+
     the[Exception] thrownBy {
       txHelper.signTransaction(unsignedTransaction)
     } should have message "Script reduced to false"
@@ -951,8 +1060,10 @@ class PhoenixTokenSpec
 
   "PhoenixTokenBurnOperation" should "fail when developer's box takes more tokens than allowed" in {
 
-    val hodlTokenAmount = 40000000 * 1000000000L
-    val startingTVLAmount: Long = 10000000 * 1000000000L
+    val hodlTokenAmount = 97537237623541120L
+    val startingTVLAmount: Long = 406609260219332L
+    val baseTokenTotalSupply = 97739924000000000L
+    // different values used to make price = 2
 
     val hodlTokenBurnAmount = 2000
 
@@ -965,7 +1076,7 @@ class PhoenixTokenSpec
         phoenixTokenContract,
         hodlBankSingleton,
         hodlTokens,
-        totalSupply,
+        baseTokenTotalSupply,
         precisionFactor,
         minBankValue,
         bankFee,
@@ -974,6 +1085,11 @@ class PhoenixTokenSpec
         Some(baseTokens)
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
 
     val (userBoxAmount, devFeeAmount, bankFeeAmount) =
       burnTokenAmount(hodlBox, hodlTokenBurnAmount)
@@ -993,7 +1109,7 @@ class PhoenixTokenSpec
         hodlTokenId,
         hodlBox.getTokens.get(1).getValue + fundingBox.getTokens.get(0).getValue
       ),
-      totalSupply,
+      baseTokenTotalSupply,
       precisionFactor,
       minBankValue,
       bankFee,
@@ -1033,6 +1149,19 @@ class PhoenixTokenSpec
       outputs = Array(hodlOutBox, recipientBox, devFeeBox)
     )
 
+    assert(
+      userBoxAmount == 3868L,
+      "must correspond to manually calculated values"
+    )
+    assert(
+      devFeeAmount == 12L,
+      "must correspond to manually calculated values"
+    )
+    assert(
+      bankFeeAmount == 120L,
+      "must correspond to manually calculated values"
+    )
+
     the[Exception] thrownBy {
       txHelper.signTransaction(unsignedTransaction)
     } should have message "Script reduced to false"
@@ -1041,8 +1170,10 @@ class PhoenixTokenSpec
 
   "PhoenixTokenBurnOperation" should "fail when developer's box has an incorrect script" in {
 
-    val hodlTokenAmount = 40000000 * 1000000000L
-    val startingTVLAmount: Long = 10000000 * 1000000000L
+    val hodlTokenAmount = 97537237623541120L
+    val startingTVLAmount: Long = 406609260219332L
+    val baseTokenTotalSupply = 97739924000000000L
+    // different values used to make price = 2
 
     val hodlTokenBurnAmount = 2000
 
@@ -1055,7 +1186,7 @@ class PhoenixTokenSpec
         phoenixTokenContract,
         hodlBankSingleton,
         hodlTokens,
-        totalSupply,
+        baseTokenTotalSupply,
         precisionFactor,
         minBankValue,
         bankFee,
@@ -1064,6 +1195,11 @@ class PhoenixTokenSpec
         Some(baseTokens)
       )
       .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
 
     val (userBoxAmount, devFeeAmount, bankFeeAmount) =
       burnTokenAmount(hodlBox, hodlTokenBurnAmount)
@@ -1083,7 +1219,7 @@ class PhoenixTokenSpec
         hodlTokenId,
         hodlBox.getTokens.get(1).getValue + fundingBox.getTokens.get(0).getValue
       ),
-      totalSupply,
+      baseTokenTotalSupply,
       precisionFactor,
       minBankValue,
       bankFee,
@@ -1113,10 +1249,390 @@ class PhoenixTokenSpec
       outputs = Array(hodlOutBox, recipientBox, devFeeBox)
     )
 
+    assert(
+      userBoxAmount == 3868L,
+      "must correspond to manually calculated values"
+    )
+    assert(
+      devFeeAmount == 12L,
+      "must correspond to manually calculated values"
+    )
+    assert(
+      bankFeeAmount == 120L,
+      "must correspond to manually calculated values"
+    )
+
     the[Exception] thrownBy {
       txHelper.signTransaction(unsignedTransaction)
     } should have message "Script reduced to false"
 
+  }
+
+  "PhoenixDepositOperation" should "work correctly when all conditions are satisfied" in {
+
+    val hodlTokenMintAmount = 20
+    val baseTokensToAdd = 20
+
+    // note the max hodlToken in bank must be one less than baseTokenTotalSupply
+    val hodlTokens = new ErgoToken(hodlTokenId, baseTokenTotalSupply - 1L)
+    val baseTokens = new ErgoToken(baseTokenId, startingTVLAmount)
+
+    val hodlBox = outBoxObj
+      .hodlBankBox(
+        phoenixTokenContract,
+        hodlBankSingleton,
+        hodlTokens,
+        baseTokenTotalSupply,
+        precisionFactor,
+        minBankValue,
+        bankFee,
+        devFee,
+        bankERGAmount,
+        Some(baseTokens)
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
+
+    val price = hodlTokenPrice(hodlBox)
+
+    require(
+      hodlBox.getTokens
+        .get(2)
+        .getValue >= baseTokenTotalSupply - baseTokenTotalSupply - 1L,
+      "never-decreasing theorem does not hold"
+    )
+
+    require(
+      price == 1000,
+      "Price does not correspond to manually calculated value"
+    )
+
+    val amountBaseTokenRequired = mintAmountToken(hodlBox, hodlTokenMintAmount)
+
+    require(
+      amountBaseTokenRequired == 20000,
+      s"Token ($amountBaseTokenRequired) delta does not correspond to manually calculated value "
+    )
+
+    val fundingBox = outBoxObj
+      .genericContractBox(
+        compiler.compileDummyContract(),
+        tokenFundingBoxValue,
+        Seq(
+          ErgoToken(hodlBox.getTokens.get(2).getId, baseTokensToAdd)
+        )
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val myAddress = new ErgoTreeContract(
+      txHelper.senderAddress.getErgoAddress.script,
+      this.ctx.getNetworkType
+    )
+
+    val hodlOutBox = outBoxObj.hodlBankBox(
+      phoenixTokenContract,
+      hodlBankSingleton,
+      hodlBox.getTokens.get(1),
+      baseTokenTotalSupply,
+      precisionFactor,
+      minBankValue,
+      bankFee,
+      devFee,
+      bankERGAmount,
+      Some(
+        ErgoToken(
+          hodlBox.getTokens.get(2).getId,
+          hodlBox.getTokens.get(2).getValue + baseTokensToAdd
+        )
+      )
+    )
+
+    val unsignedTransaction = txHelper.buildUnsignedTransaction(
+      inputs = Array(hodlBox, fundingBox),
+      outputs = Array(hodlOutBox)
+    )
+
+    noException shouldBe thrownBy {
+      txHelper.signTransaction(
+        unsignedTransaction
+      )
+    }
+  }
+
+  "PhoenixDepositOperation" should "fail when output bank box script is changed" in {
+
+    val hodlTokenMintAmount = 20
+    val baseTokensToAdd = 20
+
+    // note the max hodlToken in bank must be one less than baseTokenTotalSupply
+    val hodlTokens = new ErgoToken(hodlTokenId, baseTokenTotalSupply - 1L)
+    val baseTokens = new ErgoToken(baseTokenId, startingTVLAmount)
+
+    val hodlBox = outBoxObj
+      .hodlBankBox(
+        phoenixTokenContract,
+        hodlBankSingleton,
+        hodlTokens,
+        baseTokenTotalSupply,
+        precisionFactor,
+        minBankValue,
+        bankFee,
+        devFee,
+        bankERGAmount,
+        Some(baseTokens)
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
+
+    val price = hodlTokenPrice(hodlBox)
+
+    require(
+      hodlBox.getTokens
+        .get(2)
+        .getValue >= baseTokenTotalSupply - baseTokenTotalSupply - 1L,
+      "never-decreasing theorem does not hold"
+    )
+
+    require(
+      price == 1000,
+      "Price does not correspond to manually calculated value"
+    )
+
+    val amountBaseTokenRequired = mintAmountToken(hodlBox, hodlTokenMintAmount)
+
+    require(
+      amountBaseTokenRequired == 20000,
+      s"Token ($amountBaseTokenRequired) delta does not correspond to manually calculated value "
+    )
+
+    val fundingBox = outBoxObj
+      .genericContractBox(
+        compiler.compileDummyContract(),
+        tokenFundingBoxValue,
+        Seq(
+          ErgoToken(hodlBox.getTokens.get(2).getId, baseTokensToAdd)
+        )
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val myAddress = new ErgoTreeContract(
+      txHelper.senderAddress.getErgoAddress.script,
+      this.ctx.getNetworkType
+    )
+
+    val hodlOutBox = outBoxObj.hodlBankBox(
+      myAddress,
+      hodlBankSingleton,
+      hodlBox.getTokens.get(1),
+      baseTokenTotalSupply,
+      precisionFactor,
+      minBankValue,
+      bankFee,
+      devFee,
+      bankERGAmount,
+      Some(
+        ErgoToken(
+          hodlBox.getTokens.get(2).getId,
+          hodlBox.getTokens.get(2).getValue + baseTokensToAdd
+        )
+      )
+    )
+
+    val unsignedTransaction = txHelper.buildUnsignedTransaction(
+      inputs = Array(hodlBox, fundingBox),
+      outputs = Array(hodlOutBox)
+    )
+
+    the[Exception] thrownBy {
+      txHelper.signTransaction(unsignedTransaction)
+    } should have message "Script reduced to false"
+  }
+
+  "PhoenixDepositOperation" should "fail when output bank box registers are changed" in {
+
+    val hodlTokenMintAmount = 20
+    val baseTokensToAdd = 20
+
+    // note the max hodlToken in bank must be one less than baseTokenTotalSupply
+    val hodlTokens = new ErgoToken(hodlTokenId, baseTokenTotalSupply - 1L)
+    val baseTokens = new ErgoToken(baseTokenId, startingTVLAmount)
+
+    val hodlBox = outBoxObj
+      .hodlBankBox(
+        phoenixTokenContract,
+        hodlBankSingleton,
+        hodlTokens,
+        baseTokenTotalSupply,
+        precisionFactor,
+        minBankValue,
+        bankFee,
+        devFee,
+        bankERGAmount,
+        Some(baseTokens)
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
+
+    val price = hodlTokenPrice(hodlBox)
+
+    require(
+      hodlBox.getTokens
+        .get(2)
+        .getValue >= baseTokenTotalSupply - baseTokenTotalSupply - 1L,
+      "never-decreasing theorem does not hold"
+    )
+
+    require(
+      price == 1000,
+      "Price does not correspond to manually calculated value"
+    )
+
+    val amountBaseTokenRequired = mintAmountToken(hodlBox, hodlTokenMintAmount)
+
+    require(
+      amountBaseTokenRequired == 20000,
+      s"Token ($amountBaseTokenRequired) delta does not correspond to manually calculated value "
+    )
+
+    val fundingBox = outBoxObj
+      .genericContractBox(
+        compiler.compileDummyContract(),
+        tokenFundingBoxValue,
+        Seq(
+          ErgoToken(hodlBox.getTokens.get(2).getId, baseTokensToAdd)
+        )
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val hodlOutBox = outBoxObj.hodlBankBox(
+      phoenixTokenContract,
+      hodlBankSingleton,
+      hodlBox.getTokens.get(1),
+      baseTokenTotalSupply - 1, // <-- this line is changed
+      precisionFactor + 10, // <-- this line is changed
+      minBankValue + 2, // <-- this line is changed
+      bankFee - 1, // <-- this line is changed
+      devFee + 5, // <-- this line is changed
+      bankERGAmount,
+      Some(
+        ErgoToken(
+          hodlBox.getTokens.get(2).getId,
+          hodlBox.getTokens.get(2).getValue + baseTokensToAdd
+        )
+      )
+    )
+
+    val unsignedTransaction = txHelper.buildUnsignedTransaction(
+      inputs = Array(hodlBox, fundingBox),
+      outputs = Array(hodlOutBox)
+    )
+
+    the[Exception] thrownBy {
+      txHelper.signTransaction(unsignedTransaction)
+    } should have message "Script reduced to false"
+  }
+
+  "PhoenixDepositOperation" should "fail when output bank box baseToken amount decreases" in {
+
+    val hodlTokenMintAmount = 20
+    val baseTokensToAdd = 20
+
+    // note the max hodlToken in bank must be one less than baseTokenTotalSupply
+    val hodlTokens = new ErgoToken(hodlTokenId, baseTokenTotalSupply - 1L)
+    val baseTokens = new ErgoToken(baseTokenId, startingTVLAmount)
+
+    val hodlBox = outBoxObj
+      .hodlBankBox(
+        phoenixTokenContract,
+        hodlBankSingleton,
+        hodlTokens,
+        baseTokenTotalSupply,
+        precisionFactor,
+        minBankValue,
+        bankFee,
+        devFee,
+        bankERGAmount,
+        Some(baseTokens)
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    assert(
+      hodlBox.getTokens.get(1).getValue < extractBaseTokenSupply(hodlBox),
+      "hodlToken amount must be less than baseToken total supply"
+    )
+
+    val price = hodlTokenPrice(hodlBox)
+
+    require(
+      hodlBox.getTokens
+        .get(2)
+        .getValue >= baseTokenTotalSupply - baseTokenTotalSupply - 1L,
+      "never-decreasing theorem does not hold"
+    )
+
+    require(
+      price == 1000,
+      "Price does not correspond to manually calculated value"
+    )
+
+    val amountBaseTokenRequired = mintAmountToken(hodlBox, hodlTokenMintAmount)
+
+    require(
+      amountBaseTokenRequired == 20000,
+      s"Token ($amountBaseTokenRequired) delta does not correspond to manually calculated value "
+    )
+
+    val fundingBox = outBoxObj
+      .genericContractBox(
+        compiler.compileDummyContract(),
+        minBoxValue
+      )
+      .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val hodlOutBox = outBoxObj.hodlBankBox(
+      phoenixTokenContract,
+      hodlBankSingleton,
+      hodlBox.getTokens.get(1),
+      baseTokenTotalSupply,
+      precisionFactor,
+      minBankValue,
+      bankFee,
+      devFee,
+      bankERGAmount,
+      Some(
+        ErgoToken(
+          hodlBox.getTokens.get(2).getId,
+          hodlBox.getTokens.get(2).getValue - 1L // <-- this changed
+        )
+      )
+    )
+
+    val unsignedTransaction = txHelper.buildUnsignedTransaction(
+      inputs = Array(hodlBox, fundingBox),
+      outputs = Array(hodlOutBox),
+      tokensToBurn = Array(
+        ErgoToken( // token is burned (can be also sent to someone)
+          hodlBox.getTokens.get(2).getId,
+          1L
+        )
+      )
+    )
+
+    the[Exception] thrownBy {
+      txHelper.signTransaction(unsignedTransaction)
+    } should have message "Script reduced to false"
   }
 
 }
