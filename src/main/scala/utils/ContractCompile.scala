@@ -68,7 +68,10 @@ class ContractCompile(ctx: BlockchainContext) {
       baseToken: ErgoToken,
       brunoNum: Long,
       phoenixNum: Long,
-      kushtiNum: Long
+      kushtiNum: Long,
+      creatorNum: Long = 0L,
+      creatorAddress: Address =
+        Address.create("9iPs1ujGj2eKXVg82aGyAtUtQZQWxFaki48KFixoaNmUAoTY6wV")
   ): ErgoContract = {
     this.ctx.compileContract(
       ConstantsBuilder
@@ -92,6 +95,14 @@ class ContractCompile(ctx: BlockchainContext) {
         .item(
           "$kushtiNum",
           kushtiNum
+        )
+        .item(
+          "$creatorNum",
+          creatorNum
+        )
+        .item(
+          "$creatorAddress",
+          creatorAddress.getPublicKey
         )
         .build(),
       contract
