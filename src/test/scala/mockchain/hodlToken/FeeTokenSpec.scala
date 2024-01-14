@@ -33,6 +33,9 @@ class FeeTokenSpec
   val phoenixAddress: Address =
     Address.create("9iPs1ujGj2eKXVg82aGyAtUtQZQWxFaki48KFixoaNmUAoTY6wV")
 
+  val creatorAddress: Address =
+    Address.create("9fGRYuGyLop9HseJ9UFDx8eU9Mm4fkwURNT89HmatfL1NU929k5")
+
   val feeContractAmount: Long = (100 * math.pow(10, 9)).toLong
 
   val baseTokenId: String =
@@ -41,6 +44,7 @@ class FeeTokenSpec
   override val brunoNum = 25L
   override val kushtiNum = 25L
   override val phoenixNum = 50L
+  val creatorNum = 50L
 
   val feeTokenContract: ErgoContract = compiler.compileFeeTokenContract(
     feeTokenScript,
@@ -49,6 +53,17 @@ class FeeTokenSpec
     brunoNum,
     phoenixNum,
     kushtiNum
+  )
+
+  val feeTokenCreatorContract: ErgoContract = compiler.compileFeeTokenContract(
+    feeTokenScript,
+    minMinerFeeNanoErg,
+    new ErgoToken(baseTokenId, 1L),
+    brunoNum,
+    phoenixNum,
+    kushtiNum,
+    creatorNum,
+    creatorAddress
   )
 
   def getDevBoxes(totalAmountForDevs: Long): Array[OutBox] = {
@@ -69,6 +84,32 @@ class FeeTokenSpec
     )
   }
 
+  def getDevBoxesWithCreator(total: Long): Array[OutBox] = {
+
+    val creatorAmount: Long = (creatorNum * total) / feeDenom
+    val totalAmountForDevs: Long = total - creatorAmount
+
+    Array(
+      outBoxObj
+        .hodlMintBox(
+          brunoAddress,
+          new ErgoToken(baseTokenId, (brunoNum * totalAmountForDevs) / feeDenom)
+        ),
+      outBoxObj.hodlMintBox(
+        phoenixAddress,
+        new ErgoToken(baseTokenId, (phoenixNum * totalAmountForDevs) / feeDenom)
+      ),
+      outBoxObj.hodlMintBox(
+        kushtiAddress,
+        new ErgoToken(baseTokenId, (kushtiNum * totalAmountForDevs) / feeDenom)
+      ),
+      outBoxObj.hodlMintBox(
+        creatorAddress,
+        new ErgoToken(baseTokenId, creatorAmount)
+      )
+    )
+  }
+
   "FeeContractWithdrawal" should "work correctly when all conditions are satisfied" in {
 
     val feeContractInput =
@@ -81,6 +122,33 @@ class FeeTokenSpec
         .convertToInputWith(fakeTxId1, fakeIndex)
 
     val devBoxes = getDevBoxes(feeContractAmount)
+
+    val unsignedTransaction = txHelper.buildUnsignedTransaction(
+      inputs = Array(feeContractInput),
+      outputs = devBoxes,
+      fee = minMinerFeeNanoErg
+    )
+
+    noException shouldBe thrownBy {
+      txHelper.signTransaction(
+        unsignedTransaction
+      )
+    }
+
+  }
+
+  "FeeContractWithdrawal" should "work correctly when creator fee is added when all conditions are satisfied" in {
+
+    val feeContractInput =
+      outBoxObj
+        .hodlMintBox(
+          feeTokenCreatorContract.toAddress,
+          new ErgoToken(baseTokenId, feeContractAmount),
+          minBoxValue + minBoxValue + minBoxValue + minBoxValue + minMinerFeeNanoErg
+        )
+        .convertToInputWith(fakeTxId1, fakeIndex)
+
+    val devBoxes = getDevBoxesWithCreator(feeContractAmount)
 
     val unsignedTransaction = txHelper.buildUnsignedTransaction(
       inputs = Array(feeContractInput),

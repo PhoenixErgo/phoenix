@@ -16,7 +16,7 @@
     // 1. Fee Distribution Tx
     // Inputs: PhoenixFee1, ... , PhoenixFeeM
     // DataInputs: None
-    // Outputs: Bruno, Phoenix, Kushti, MinerFee
+    // Outputs: Bruno, Phoenix, Kushti, Creator? MinerFee
     // Context Variables: None
 
     // ===== Compile Time Constants ($) ===== //
@@ -25,6 +25,8 @@
     // $brunoNum: Long
     // $phoenixNum: Long
     // $kushtiNum: Long
+    // $creatorNum: Long
+    // $creatorAddress: SigmaProp
 
     // ===== Context Variables (_) ===== //
     // None
@@ -38,6 +40,8 @@
     val phoenixAddress: SigmaProp = PK("3Ww5SQcNuR5rfQbUByioBPpHYUf2L9xPEdstov3G875dvGXfRXAC")
     val kushtiAddress: SigmaProp  = PK("3Wyh1fdvMJKLte2qwawGNMRY3LumPJGw6EpqQsM5HrWggL2uJzSu")
 
+    val isCreator: Boolean = ($creatorNum != 0L)
+
     // ===== Fee Distribution Tx ===== //
     val validFeeDistributionTx: Boolean = {
 
@@ -45,9 +49,10 @@
         val brunoBoxOUT: Box    = OUTPUTS(0)
         val phoenixBoxOUT: Box  = OUTPUTS(1)
         val kushtiBoxOUT: Box   = OUTPUTS(2)
-        val minerFeeBoxOUT: Box = OUTPUTS(3)
+        val creatorBoxOUT: Box  = OUTPUTS(3)
+        val minerFeeBoxOUT: Box = if (isCreator) OUTPUTS(4) else OUTPUTS(3)
 
-        val devAmount: Long = OUTPUTS.flatMap({ (output: Box) =>
+        val totalAmount: Long = OUTPUTS.flatMap({ (output: Box) =>
 
             output.tokens.filter({ (token: (Coll[Byte], Long)) =>
 
@@ -61,20 +66,25 @@
 
         }).fold(0L, { (acc: Long, curr: Long) => acc + curr })
 
+        val creatorAmount: Long = ($creatorNum * totalAmount) / feeDenom
+        val devAmount: Long = totalAmount - creatorAmount
+
         val validDevBoxes: Boolean = {
 
             val brunoAmount: Long   = ($brunoNum * devAmount) / feeDenom
             val phoenixAmount: Long = ($phoenixNum * devAmount) / feeDenom
             val kushtiAmount: Long  = ($kushtiNum * devAmount) / feeDenom
 
-            val validBruno: Boolean   = (brunoBoxOUT.tokens(0)._1 == $baseTokenId) && (brunoBoxOUT.tokens(0)._2 >= brunoAmount) && (brunoBoxOUT.propositionBytes == brunoAddress.propBytes)
-            val validPhoenix: Boolean = (phoenixBoxOUT.tokens(0)._1 == $baseTokenId) && (phoenixBoxOUT.tokens(0)._2 >= phoenixAmount) && (phoenixBoxOUT.propositionBytes == phoenixAddress.propBytes)
-            val validKushti: Boolean  = (kushtiBoxOUT.tokens(0)._1 == $baseTokenId) && (kushtiBoxOUT.tokens(0)._2 >= kushtiAmount) && (kushtiBoxOUT.propositionBytes == kushtiAddress.propBytes)
+            val validBruno: Boolean    = (brunoBoxOUT.tokens(0)._1 == $baseTokenId) && (brunoBoxOUT.tokens(0)._2 >= brunoAmount) && (brunoBoxOUT.propositionBytes == brunoAddress.propBytes)
+            val validPhoenix: Boolean  = (phoenixBoxOUT.tokens(0)._1 == $baseTokenId) && (phoenixBoxOUT.tokens(0)._2 >= phoenixAmount) && (phoenixBoxOUT.propositionBytes == phoenixAddress.propBytes)
+            val validKushti: Boolean   = (kushtiBoxOUT.tokens(0)._1 == $baseTokenId) && (kushtiBoxOUT.tokens(0)._2 >= kushtiAmount) && (kushtiBoxOUT.propositionBytes == kushtiAddress.propBytes)
+            val validCreator: Boolean  = if (isCreator) (creatorBoxOUT.tokens(0)._1 == $baseTokenId) && (creatorBoxOUT.tokens(0)._2 >= creatorAmount) && (creatorBoxOUT.propositionBytes == $creatorAddress.propBytes) else true
 
             allOf(Coll(
                 validBruno,
                 validPhoenix,
-                validKushti
+                validKushti,
+                validCreator
             ))
 
         }
@@ -89,7 +99,7 @@
 
         }
 
-        val validOutputSize: Boolean = (OUTPUTS.size == 4)
+        val validOutputSize: Boolean = if (isCreator) (OUTPUTS.size == 5) else (OUTPUTS.size == 4)
 
         allOf(Coll(
             validDevBoxes,
@@ -99,6 +109,20 @@
 
     }
 
-    sigmaProp(validFeeDistributionTx) && atLeast(1, Coll(brunoAddress, phoenixAddress, kushtiAddress)) // Done so we are incentivized to not spam the miner fee.
+    val validSignatures: Boolean = {
+
+        if (isCreator) {
+
+            atLeast(1, Coll(brunoAddress, phoenixAddress, kushtiAddress, $creatorAddress)) // Done so we are incentivised to not spam the miner fee.
+
+        } else {
+
+            atLeast(1, Coll(brunoAddress, phoenixAddress, kushtiAddress)) // Done so we are incentivised to not spam the miner fee.
+
+        }
+
+    }
+
+    sigmaProp(validFeeDistributionTx) && validSignatures
 
 }
