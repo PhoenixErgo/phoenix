@@ -186,21 +186,13 @@ class akkaFunctions {
           serviceConf.minTxOperatorFee,
           Array(
             new ErgoToken(
-              "7402ce4755a154cf4e4794168c69df3e33de14ff333e39ba5bdef0d892537df6",
+              "0cd8c9f416e5b1ca9f986a7f10a84191dfb85941619e49e53c0dc30ebf83324b",
               1
             ),
             new ErgoToken(
-              "0624ab9cfdcb83a15f3648ff07e96ac44404e3cd19f76e1476a46a4c57466daa",
+              "2e59555f055c1341e64d51267a381f6dbbe572cb725cfc471b35e84bbc258b75",
               1
             ),
-            new ErgoToken(
-              "7c77193797347809d9482b716d017310c0d987b74f4f2bc931e48ba97e0ea586",
-              1
-            ),
-            new ErgoToken(
-              "7ced94bf0753e4f8815637a3552a05f5605acc4727e1137613c9e9e8f78a1a36",
-              1
-            )
           )
         )
       })
