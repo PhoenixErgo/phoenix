@@ -36,7 +36,7 @@
     // Context Variables: None
 
     // ===== Compile Time Constants ($) ===== //
-    // $phoenixFeeContractBytesHash: Coll[Byte]
+    // $phoenixFeeContractBytes: Coll[Byte]
 
     // ===== Context Variables (_) ===== //
     // None
@@ -182,7 +182,7 @@
                     allOf(Coll(
                         (phoenixFeeBoxOUT.tokens(0)._1 == SELF.tokens(2)._1),
                         (phoenixFeeBoxOUT.tokens(0)._2 == devFeeAmountAdjusted),
-                        (blake2b256(phoenixFeeBoxOUT.propositionBytes) == $phoenixFeeContractBytesHash)
+                        (phoenixFeeBoxOUT.propositionBytes == $phoenixFeeContractBytes)
                     ))
 
                 } else {

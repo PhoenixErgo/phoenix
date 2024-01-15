@@ -82,7 +82,10 @@ trait PhoenixCommon extends HttpClientTesting {
     compiler.compileBankContract(phoenixScript, feeContract)
 
   val phoenixTokenContract: ErgoContract =
-    compiler.compileBankContract(phoenixTokenScript, defaultFeeTokenContract)
+    compiler.compileTokenBankContract(
+      phoenixTokenScript,
+      defaultFeeTokenContract
+    )
 
   val proxyScript: String =
     PhoenixContracts.phoenix_v1_hodlcoin_proxy.contractScript

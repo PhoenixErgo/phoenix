@@ -46,6 +46,22 @@ class ContractCompile(ctx: BlockchainContext) {
     )
   }
 
+  def compileTokenBankContract(
+      contract: String,
+      developerFeeContract: ErgoContract
+  ): ErgoContract = {
+    this.ctx.compileContract(
+      ConstantsBuilder
+        .create()
+        .item(
+          "$phoenixFeeContractBytes",
+          developerFeeContract.toAddress.asP2S().scriptBytes
+        )
+        .build(),
+      contract
+    )
+  }
+
   def compileFeeContract(
       contract: String,
       minMinerFeeNanoErg: Long

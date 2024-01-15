@@ -16,6 +16,7 @@ import org.ergoplatform.appkit.{
   NetworkType
 }
 import org.ergoplatform.sdk.ErgoToken
+import special.collection.Coll
 import utils.{
   ContractCompile,
   DoubleSpendingError,
@@ -77,16 +78,26 @@ class TxBuildUtility(
           recipientAddress <- res.recipientAddress.toRight(
             "[hodlErg] Recipient address not found"
           )
-          hodlSingleton <- res.hodlSingleton.toRight("[hodlErg] singleton not found")
-          hodlTokenId <- res.hodlTokenId.toRight("[hodlErg] hodl token not found")
+          hodlSingleton <- res.hodlSingleton.toRight(
+            "[hodlErg] singleton not found"
+          )
+          hodlTokenId <- res.hodlTokenId.toRight(
+            "[hodlErg] hodl token not found"
+          )
           totalTokenSupply <- res.totalTokenSupply.toRight(
             "[hodlErg] total token supply not found"
           )
-          precisionFactor <- res.precisionFactor.toRight("[hodlErg] precision not found")
-          minBankValue <- res.minBankValue.toRight("[hodlErg] min bank value not found")
+          precisionFactor <- res.precisionFactor.toRight(
+            "[hodlErg] precision not found"
+          )
+          minBankValue <- res.minBankValue.toRight(
+            "[hodlErg] min bank value not found"
+          )
           devFee <- res.devFee.toRight("[hodlErg] dev fee not found")
           bankFee <- res.bankFee.toRight("[hodlErg] bank fee not found")
-          minBoxValue <- res.minBoxValue.toRight("[hodlErg] min box value not found")
+          minBoxValue <- res.minBoxValue.toRight(
+            "[hodlErg] min box value not found"
+          )
           minerFee <- res.minerFee.toRight("[hodlErg] miner fee not found")
           txOperatorFee <- res.txOperatorFee.toRight(
             "[hodlErg] tx operator fee not found"
@@ -119,7 +130,9 @@ class TxBuildUtility(
                 .getValue - hodlMintAmount
             } catch {
               case e: Exception =>
-                return Left("[hodlErg] holdOutBoxHodlTokenAmount could not be calculated")
+                return Left(
+                  "[hodlErg] holdOutBoxHodlTokenAmount could not be calculated"
+                )
             }
 
           val phoenixContract =
@@ -161,7 +174,9 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("[hodlErg] error building recipient box for mint tx")
+                return Left(
+                  "[hodlErg] error building recipient box for mint tx"
+                )
             }
 
           val unsignedTransaction =
@@ -193,7 +208,9 @@ class TxBuildUtility(
               case e: DoubleSpendingError  => return Left(e.getMessage)
               case e: TransactionInMempool => return Left(e.getMessage)
               case e: Exception =>
-                return Left("[hodlErg] error submitting hodlMint tx: " + e.getMessage)
+                return Left(
+                  "[hodlErg] error submitting hodlMint tx: " + e.getMessage
+                )
             }
 
           println("[hodlErg] Mint Transaction Submitted: " + txHash)
@@ -220,8 +237,12 @@ class TxBuildUtility(
           recipientAddress <- res.recipientAddress.toRight(
             "[hodlErg] recipient address not found"
           )
-          hodlSingleton <- res.hodlSingleton.toRight("[hodlErg] hodl singleton not found")
-          hodlTokenId <- res.hodlTokenId.toRight("[hodlErg] hodl token id not found")
+          hodlSingleton <- res.hodlSingleton.toRight(
+            "[hodlErg] hodl singleton not found"
+          )
+          hodlTokenId <- res.hodlTokenId.toRight(
+            "[hodlErg] hodl token id not found"
+          )
           totalTokenSupply <- res.totalTokenSupply.toRight(
             "[hodlErg] total token supply not found"
           )
@@ -233,7 +254,9 @@ class TxBuildUtility(
           )
           devFee <- res.devFee.toRight("[hodlErg] developer fee not found")
           bankFee <- res.bankFee.toRight("[hodlErg] bank fee not found")
-          minBoxValue <- res.minBoxValue.toRight("[hodlErg] minimum box value not found")
+          minBoxValue <- res.minBoxValue.toRight(
+            "[hodlErg] minimum box value not found"
+          )
           minerFee <- res.minerFee.toRight("[hodlErg] miner fee not found")
           txOperatorFee <- res.txOperatorFee.toRight(
             "[hodlErg] transaction operator fee not found"
@@ -356,7 +379,9 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("[hodlErg] cannot build hodlERG burn tx: " + e.getMessage)
+                return Left(
+                  "[hodlErg] cannot build hodlERG burn tx: " + e.getMessage
+                )
             }
 
 //          println(txHelper.getUnsignedJson(unsignedTransaction)) // for debugging
@@ -368,7 +393,9 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("[hodlErg] error signing hodlERG burn tx: " + e.getMessage)
+                return Left(
+                  "[hodlErg] error signing hodlERG burn tx: " + e.getMessage
+                )
             }
 
           val txHash =
@@ -378,7 +405,9 @@ class TxBuildUtility(
               case e: DoubleSpendingError  => return Left(e.getMessage)
               case e: TransactionInMempool => return Left(e.getMessage)
               case e: Exception =>
-                return Left("[hodlErg] error submitting burn tx: " + e.getMessage)
+                return Left(
+                  "[hodlErg] error submitting burn tx: " + e.getMessage
+                )
             }
 
           println("[hodlErg] Burn Transaction Submitted: " + txHash)
@@ -399,16 +428,26 @@ class TxBuildUtility(
           recipientAddress <- res.recipientAddress.toRight(
             "[hodlToken] Recipient address not found"
           )
-          hodlSingleton <- res.hodlSingleton.toRight("[hodlToken] singleton not found")
-          hodlTokenId <- res.hodlTokenId.toRight("[hodlToken] hodl token not found")
+          hodlSingleton <- res.hodlSingleton.toRight(
+            "[hodlToken] singleton not found"
+          )
+          hodlTokenId <- res.hodlTokenId.toRight(
+            "[hodlToken] hodl token not found"
+          )
           totalTokenSupply <- res.totalTokenSupply.toRight(
             "[hodlToken] total token supply not found"
           )
-          precisionFactor <- res.precisionFactor.toRight("[hodlToken] precision not found")
-          minBankValue <- res.minBankValue.toRight("[hodlToken] min bank value not found")
+          precisionFactor <- res.precisionFactor.toRight(
+            "[hodlToken] precision not found"
+          )
+          minBankValue <- res.minBankValue.toRight(
+            "[hodlToken] min bank value not found"
+          )
           devFee <- res.devFee.toRight("[hodlToken] dev fee not found")
           bankFee <- res.bankFee.toRight("[hodlToken] bank fee not found")
-          minBoxValue <- res.minBoxValue.toRight("[hodlToken] min box value not found")
+          minBoxValue <- res.minBoxValue.toRight(
+            "[hodlToken] min box value not found"
+          )
           minerFee <- res.minerFee.toRight("[hodlToken] miner fee not found")
           txOperatorFee <- res.txOperatorFee.toRight(
             "[hodlToken] tx operator fee not found"
@@ -434,7 +473,9 @@ class TxBuildUtility(
               baseToken.getValue
             } catch {
               case e: Exception =>
-                return Left("[hodlToken] base token could not be extracted from proxy")
+                return Left(
+                  "[hodlToken] base token could not be extracted from proxy"
+                )
             }
 
           val tokenMintAmount =
@@ -445,7 +486,9 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("[hodlToken] hodlMintAmount could not be calculated")
+                return Left(
+                  "[hodlToken] hodlMintAmount could not be calculated"
+                )
             }
 
           val phoenixContract =
@@ -562,8 +605,12 @@ class TxBuildUtility(
           recipientAddress <- res.recipientAddress.toRight(
             "[hodlToken] recipient address not found"
           )
-          hodlSingleton <- res.hodlSingleton.toRight("[hodlToken] hodl singleton not found")
-          hodlTokenId <- res.hodlTokenId.toRight("[hodlToken] hodl token id not found")
+          hodlSingleton <- res.hodlSingleton.toRight(
+            "[hodlToken] hodl singleton not found"
+          )
+          hodlTokenId <- res.hodlTokenId.toRight(
+            "[hodlToken] hodl token id not found"
+          )
           totalTokenSupply <- res.totalTokenSupply.toRight(
             "[hodlToken] total token supply not found"
           )
@@ -575,7 +622,9 @@ class TxBuildUtility(
           )
           devFee <- res.devFee.toRight("[hodlToken] developer fee not found")
           bankFee <- res.bankFee.toRight("[hodlToken] bank fee not found")
-          minBoxValue <- res.minBoxValue.toRight("[hodlToken] minimum box value not found")
+          minBoxValue <- res.minBoxValue.toRight(
+            "[hodlToken] minimum box value not found"
+          )
           minerFee <- res.minerFee.toRight("[hodlToken] miner fee not found")
           txOperatorFee <- res.txOperatorFee.toRight(
             "[hodlToken] transaction operator fee not found"
@@ -640,6 +689,25 @@ class TxBuildUtility(
                 return Left("[hodlToken] error getting phoenix contract")
             }
 
+          val phoenixFeeContractBytesConstant = 16
+
+          val feeContract =
+            try {
+              Address
+                .fromPropositionBytes(
+                  ctx.getNetworkType,
+                  phoenixContract.getErgoTree
+                    .constants(phoenixFeeContractBytesConstant)
+                    .value
+                    .asInstanceOf[Coll[Byte]]
+                    .toArray
+                )
+                .toErgoContract
+            } catch {
+              case e: Exception =>
+                return Left("[hodlToken] error getting fee contract")
+            }
+
           val hodlOutBox =
             try {
               outBoxObj.hodlBankBox(
@@ -677,23 +745,6 @@ class TxBuildUtility(
                 return Left("[hodlToken] error building recipient box for burn")
             }
 
-          val feeScript: String = {
-            if (ctx.getNetworkType == NetworkType.MAINNET) {
-              PhoenixContracts.phoenix_v1_hodltoken_fee.contractScript
-            } else {
-              PhoenixContracts.phoenix_v1_hodltoken_feeTest_testnet.contractScript
-            }
-          }
-
-          val feeContract: ErgoContract = compiler.compileFeeTokenContract(
-            feeScript,
-            minMinerFee,
-            currentBankInput.getTokens.get(2),
-            25L,
-            25L,
-            25L
-          )
-
           val devFeeBox =
             try {
               outBoxObj.tokenOutBox(
@@ -724,7 +775,9 @@ class TxBuildUtility(
               )
             } catch {
               case e: Exception =>
-                return Left("[hodlToken] cannot build hodlToken burn tx: " + e.getMessage)
+                return Left(
+                  "[hodlToken] cannot build hodlToken burn tx: " + e.getMessage
+                )
             }
 
 //          println(
