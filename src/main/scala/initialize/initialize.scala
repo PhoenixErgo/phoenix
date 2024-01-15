@@ -3,7 +3,7 @@ package initialize
 import configs.{HodlTokenConf, conf, serviceOwnerConf}
 import contracts.PhoenixContracts
 import execute.Client
-import org.ergoplatform.appkit.{ErgoContract, Parameters}
+import org.ergoplatform.appkit.{Address, ErgoContract, Parameters}
 import org.ergoplatform.sdk.ErgoToken
 import utils.{ContractCompile, InputBoxes, OutBoxes, TransactionHelper}
 
@@ -233,7 +233,7 @@ object initializeToken extends App {
 
   private val feeScript
       : String = // make sure to change depending on testnet or mainnet
-    PhoenixContracts.phoenix_v1_hodltoken_feeTest_testnet.contractScript
+    PhoenixContracts.phoenix_v1_hodltoken_fee.contractScript
 
   private val phoenixScript: String =
     PhoenixContracts.phoenix_v1_hodltoken_bank.contractScript
@@ -248,17 +248,22 @@ object initializeToken extends App {
     minBankValue
   )
 
+  val cometCreatorAddress =
+    Address.create("9h6Ao31CVSsYisf4pWTM43jv6k3BaXV3jovGfaRj9PrqfYms6Rf")
+
   private val feeContract: ErgoContract = compiler.compileFeeTokenContract(
     feeScript,
     serviceConf.minMinerFee,
     comet,
     25L,
-    25L,
-    25L
+    60L,
+    15L,
+    66L,
+    cometCreatorAddress
   )
 
   private val phoenixContract: ErgoContract =
-    compiler.compileBankContract(phoenixScript, feeContract)
+    compiler.compileTokenBankContract(phoenixScript, feeContract)
 
   private val proxyAddress = compiler
     .compileProxyContract(
@@ -269,8 +274,8 @@ object initializeToken extends App {
 
   val totalTokenSupply = 21000000000L
   val precisionFactor = 1L
-  val bankFeeNum = 30L
-  val devFeeNum = 3L
+  val bankFeeNum = 100L
+  val devFeeNum = 30L
 
   private val hodlDecimal = 0
 
@@ -287,8 +292,8 @@ object initializeToken extends App {
 
   val singleton = outBoxObj.tokenHelper(
     genesisInput.head,
-    "Phoenix hodlComet Bank Singleton",
-    "Phoenix hodlComet bank identification token",
+    "Phoenix hodlComet10 Bank Singleton",
+    "Phoenix hodlComet10 bank identification token",
     1L,
     0
   )
@@ -313,8 +318,8 @@ object initializeToken extends App {
 
   val hodlTokens = outBoxObj.tokenHelper(
     hodlTokenMintInput,
-    "hodlCOMET3",
-    "The Phoenix Finance implementation of the hodlToken protocol: hodlCOMET 3%",
+    "hodlCOMET10",
+    "The Phoenix Finance implementation of the hodlToken protocol: hodlCOMET 10%",
     totalTokenSupply,
     hodlDecimal
   )
