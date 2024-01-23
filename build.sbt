@@ -39,7 +39,7 @@ libraryDependencies ++= Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.ergoplatform" %% "ergo-appkit" % "5.0.1",
+  "org.ergoplatform" %% "ergo-appkit" % "566e0a59-SNAPSHOT",
   "io.github.k-singh" %% "plasma-toolkit" % "1.0.2",
   "io.github.ergo-lend" % "edge_2.12" % "0.1-SNAPSHOT",
   "com.google.code.gson" % "gson" % "2.10.1",
