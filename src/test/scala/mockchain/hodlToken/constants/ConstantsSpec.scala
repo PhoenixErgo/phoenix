@@ -8,7 +8,7 @@ import org.ergoplatform.sdk.ErgoToken
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should
 import scorex.crypto.hash.Blake2b256
-import special.collection.Coll
+import sigma.Coll
 import utils.ContractCompile
 
 class ConstantsSpec extends AnyFlatSpec with should.Matchers {

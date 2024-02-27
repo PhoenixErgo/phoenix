@@ -5,7 +5,7 @@ import contracts.PhoenixContracts
 import execute.DataHandling.{sortProxyInputs, validateBox, validateTokenBox}
 import org.ergoplatform.appkit.InputBox
 import org.ergoplatform.sdk.ErgoToken
-import special.collection.Coll
+import sigma.Coll
 import utils.{BoxAPI, BoxJson}
 
 class ErgoScriptConstantDecodeError(message: String) extends Exception(message)

@@ -6,6 +6,7 @@ import org.ergoplatform.sdk.JavaHelpers._
 import java.util.{List => JList}
 import java.lang.{String => JString}
 import org.apache.commons.io.FileUtils
+import org.ergoplatform.sdk.SdkIsos.JListToIndexedSeq
 
 import java.io.File
 import java.nio.charset.Charset

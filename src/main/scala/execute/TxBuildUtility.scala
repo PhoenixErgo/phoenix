@@ -2,29 +2,11 @@ package execute
 
 import contracts.PhoenixContracts
 import execute.DataHandling.extractInputData
-import execute.HodlCalulations.{
-  burnAmount,
-  burnTokenAmount,
-  hodlMintAmountFromERG,
-  hodlTokenMintAmount
-}
-import org.ergoplatform.appkit.{
-  Address,
-  BlockchainContext,
-  ErgoContract,
-  InputBox,
-  NetworkType
-}
+import execute.HodlCalulations.{burnAmount, burnTokenAmount, hodlMintAmountFromERG, hodlTokenMintAmount}
+import org.ergoplatform.appkit.{Address, BlockchainContext, ErgoContract, InputBox, NetworkType}
 import org.ergoplatform.sdk.ErgoToken
-import special.collection.Coll
-import utils.{
-  ContractCompile,
-  DoubleSpendingError,
-  OutBoxes,
-  TransactionHelper,
-  TransactionInMempool,
-  explorerApi
-}
+import sigma.Coll
+import utils.{ContractCompile, DoubleSpendingError, OutBoxes, TransactionHelper, TransactionInMempool, explorerApi}
 
 import scala.collection.JavaConverters._
 

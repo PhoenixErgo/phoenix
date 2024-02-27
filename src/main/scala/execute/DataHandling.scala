@@ -1,8 +1,8 @@
 package execute
 
-import org.ergoplatform.appkit.{Address, InputBox, NetworkType}
+import org.ergoplatform.appkit.{Address, InputBox, NetworkType, SigmaProp}
 import org.ergoplatform.sdk.ErgoToken
-import special.collection.Coll
+import sigma.Coll
 import utils.BoxJson
 
 import scala.collection.JavaConverters._
@@ -37,7 +37,7 @@ object DataHandling {
           proxyInput.getRegisters
             .get(0)
             .getValue
-            .asInstanceOf[special.sigma.SigmaProp]
+            .asInstanceOf[sigma.SigmaProp]
         )
         .map(
           new org.ergoplatform.appkit.SigmaProp(_).toAddress(networkType)
